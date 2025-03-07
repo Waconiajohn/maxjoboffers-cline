@@ -1,0 +1,67 @@
+JOHN DOE
+Software Engineer
+
+CONTACT
+Email: john.doe@example.com
+Phone: (555) 123-4567
+LinkedIn: linkedin.com/in/johndoe
+GitHub: github.com/johndoe
+
+SUMMARY
+Experienced software engineer with 5+ years of expertise in full-stack development. Proficient in JavaScript, TypeScript, React, Node.js, and cloud technologies. Passionate about creating scalable, user-friendly applications and solving complex problems.
+
+SKILLS
+Programming Languages: JavaScript, TypeScript, Python, Java
+Frontend: React, Redux, HTML5, CSS3, SASS, Material UI
+Backend: Node.js, Express, NestJS, Django
+Databases: PostgreSQL, MongoDB, Redis
+Cloud & DevOps: AWS, Docker, Kubernetes, CI/CD
+Testing: Jest, React Testing Library, Cypress
+Tools: Git, GitHub, JIRA, Figma
+
+EXPERIENCE
+Senior Software Engineer
+Tech Innovations Inc. | San Francisco, CA | Jan 2022 - Present
+- Led development of a microservices-based e-commerce platform, improving system reliability by 35%
+- Architected and implemented a real-time analytics dashboard using React, Redux, and WebSockets
+- Mentored junior developers and conducted code reviews, improving team productivity by 25%
+- Optimized database queries and implemented caching strategies, reducing API response times by 40%
+
+Software Engineer
+Digital Solutions LLC | San Francisco, CA | Mar 2019 - Dec 2021
+- Developed and maintained RESTful APIs using Node.js and Express, serving 100K+ daily users
+- Built responsive web applications using React and Material UI, improving user engagement by 20%
+- Implemented automated testing with Jest and Cypress, increasing code coverage to 85%
+- Collaborated with UX/UI designers to implement pixel-perfect interfaces and improve user experience
+
+Junior Developer
+Startup Innovations | San Jose, CA | Jun 2017 - Feb 2019
+- Contributed to frontend development using React and Redux for a SaaS product
+- Assisted in database design and implementation using MongoDB
+- Participated in agile development processes, including daily stand-ups and sprint planning
+
+EDUCATION
+Bachelor of Science in Computer Science
+University of California, Berkeley | 2013 - 2017
+- GPA: 3.8/4.0
+- Relevant Coursework: Data Structures, Algorithms, Database Systems, Web Development
+
+PROJECTS
+Personal Finance Dashboard
+- Built a full-stack application using React, Node.js, and PostgreSQL
+- Implemented data visualization with D3.js and real-time updates with WebSockets
+- Deployed using Docker and AWS, with CI/CD pipeline using GitHub Actions
+
+Open Source Contribution
+- Active contributor to several open-source projects on GitHub
+- Created and maintained a popular npm package with 10K+ weekly downloads
+- Presented at local meetups and conferences on modern web development techniques
+
+CERTIFICATIONS
+- AWS Certified Solutions Architect
+- MongoDB Certified Developer
+- Google Cloud Professional Developer
+
+LANGUAGES
+- English (Native)
+- Spanish (Conversational)

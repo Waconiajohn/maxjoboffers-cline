@@ -1,0 +1,99 @@
+{
+  "behavioral": [
+    {
+      "question": "Tell me about a time when you had to deal with a difficult team member. How did you handle the situation?",
+      "category": "Teamwork",
+      "difficulty": "Medium",
+      "tips": "Use the STAR method (Situation, Task, Action, Result). Focus on how you communicated effectively and found a resolution.",
+      "sampleAnswer": "In my previous role at Digital Solutions, I worked with a team member who consistently missed deadlines and was often defensive when receiving feedback. I scheduled a private meeting to understand their perspective and discovered they were overwhelmed with multiple projects. I helped them prioritize tasks and suggested we have brief daily check-ins. I also advocated for a more balanced workload distribution in our team. Within a month, their performance improved significantly, and our team's overall productivity increased by 15%."
+    },
+    {
+      "question": "Describe a situation where you had to make a difficult decision with limited information. What was your approach?",
+      "category": "Decision Making",
+      "difficulty": "Hard",
+      "tips": "Emphasize your analytical thinking, risk assessment, and how you gathered what information was available.",
+      "sampleAnswer": "While leading a critical project at Tech Innovations, we faced a major technical issue two days before launch. With limited time for thorough analysis, I gathered the available data, consulted with key team members, and created a decision matrix weighing potential solutions against risks and benefits. I decided to implement a temporary workaround while developing a permanent solution post-launch. This approach allowed us to meet our deadline while minimizing risk. The launch was successful, and we implemented the permanent fix within two weeks."
+    },
+    {
+      "question": "Tell me about a time when you failed at something. How did you handle it?",
+      "category": "Resilience",
+      "difficulty": "Medium",
+      "tips": "Be honest about the failure, but focus on what you learned and how you grew from the experience.",
+      "sampleAnswer": "Early in my career, I underestimated the complexity of a database migration project and missed our deadline by two weeks. I took responsibility for the delay and conducted a thorough post-mortem analysis. I identified that I hadn't allocated enough time for testing and hadn't anticipated certain compatibility issues. I created a detailed document of lessons learned and developed a more comprehensive project planning template that included buffer time and risk assessment. This template has since been adopted by my team for all migration projects, and we haven't missed a deadline since."
+    },
+    {
+      "question": "Give an example of a time when you showed leadership skills.",
+      "category": "Leadership",
+      "difficulty": "Medium",
+      "tips": "Focus on how you motivated others, set a vision, or took initiative even if you weren't in a formal leadership role.",
+      "sampleAnswer": "When our team was struggling with an increasing backlog of bug fixes, I took initiative despite not being the formal team lead. I analyzed the backlog, categorized issues by priority and complexity, and proposed a 'bug bash' week where we would focus exclusively on clearing critical issues. I created a tracking dashboard and organized daily stand-ups to maintain momentum. By the end of the week, we had resolved 85% of critical bugs, and team morale had significantly improved. Management later implemented quarterly bug bash weeks based on this success."
+    },
+    {
+      "question": "Describe a situation where you had to adapt to a significant change at work.",
+      "category": "Adaptability",
+      "difficulty": "Medium",
+      "tips": "Show how you remained flexible, positive, and productive during the change.",
+      "sampleAnswer": "When my company decided to switch from a waterfall to an agile development methodology, it required a complete shift in how we worked. I took the initiative to learn about agile principles by taking online courses and attending workshops. I helped create user stories from our existing requirements documentation and volunteered to be a scrum master for our initial sprints. I also organized lunch-and-learn sessions to help team members who were struggling with the transition. Within three months, our team's velocity had increased by 30%, and we were delivering features more consistently."
+    }
+  ],
+  "technical": [
+    {
+      "question": "How would you design a scalable web application that needs to handle millions of users?",
+      "category": "System Design",
+      "difficulty": "Hard",
+      "tips": "Discuss load balancing, caching strategies, database scaling, and microservices architecture.",
+      "sampleAnswer": "I would design the application with a microservices architecture to allow independent scaling of components. For the frontend, I'd implement server-side rendering with React for initial load performance and client-side rendering for interactivity. I'd use a CDN for static assets and implement aggressive caching strategies. For the backend, I'd create stateless services behind a load balancer, with auto-scaling based on traffic patterns. The database layer would use a combination of relational and NoSQL databases depending on the data access patterns, with read replicas and sharding for scaling. I'd implement a message queue for asynchronous processing and a caching layer with Redis. For monitoring and resilience, I'd set up comprehensive logging, alerting, and circuit breakers to prevent cascading failures."
+    },
+    {
+      "question": "Explain how you would optimize a slow-performing database query.",
+      "category": "Database",
+      "difficulty": "Medium",
+      "tips": "Mention query analysis, indexing, denormalization, and query rewriting techniques.",
+      "sampleAnswer": "First, I would use EXPLAIN or a similar tool to analyze the query execution plan to identify bottlenecks. Common issues include missing indexes, inefficient joins, or suboptimal WHERE clauses. I would add appropriate indexes for columns used in WHERE, JOIN, and ORDER BY clauses, being careful not to over-index as it affects write performance. If the query involves complex joins, I might consider denormalizing certain tables or creating materialized views for frequently accessed data patterns. For complex aggregations, I might pre-compute results or use window functions instead of subqueries. If the database is handling large datasets, I would consider partitioning tables based on access patterns. Finally, I would benchmark the optimized query to ensure it meets performance requirements."
+    },
+    {
+      "question": "How would you implement authentication and authorization in a web application?",
+      "category": "Security",
+      "difficulty": "Medium",
+      "tips": "Discuss JWT, OAuth, role-based access control, and security best practices.",
+      "sampleAnswer": "For authentication, I would implement OAuth 2.0 with OpenID Connect to leverage existing identity providers while supporting social logins. For session management, I would use JWTs stored in HTTP-only, secure cookies with appropriate expiration and refresh token rotation. For authorization, I would implement role-based access control (RBAC) with fine-grained permissions. I would store user roles and permissions in a database and cache them for performance. On the frontend, I would conditionally render UI elements based on user permissions. On the backend, I would implement middleware that validates permissions before allowing access to protected routes. For API security, I would use rate limiting, CORS policies, and CSRF protection. All sensitive data would be encrypted at rest and in transit using industry-standard encryption algorithms."
+    },
+    {
+      "question": "Explain the concept of closures in JavaScript and provide an example of their practical use.",
+      "category": "JavaScript",
+      "difficulty": "Medium",
+      "tips": "Define closures clearly and show how they're used in real-world scenarios like data encapsulation or function factories.",
+      "sampleAnswer": "A closure in JavaScript is a function that has access to its own scope, the outer function's scope, and the global scope, even after the outer function has returned. Closures are created when a function is defined within another function, allowing the inner function to access the outer function's variables. A practical example is creating private variables in a module pattern: \n\nfunction createCounter() {\n  let count = 0; // Private variable\n  \n  return {\n    increment: function() {\n      count++;\n      return count;\n    },\n    decrement: function() {\n      count--;\n      return count;\n    },\n    getCount: function() {\n      return count;\n    }\n  };\n}\n\nconst counter = createCounter();\ncounter.increment(); // 1\ncounter.increment(); // 2\ncounter.getCount(); // 2\n\nIn this example, the 'count' variable is not accessible directly from outside the createCounter function, but the returned functions can access and modify it through closure, providing data encapsulation."
+    },
+    {
+      "question": "How would you handle error states and edge cases in a React application?",
+      "category": "React",
+      "difficulty": "Medium",
+      "tips": "Discuss error boundaries, form validation, loading states, and empty states.",
+      "sampleAnswer": "I approach error handling in React applications comprehensively. At the component level, I implement React Error Boundaries to catch and gracefully handle rendering errors, preventing the entire application from crashing. For API calls, I use try/catch blocks with async/await or promise chaining with .catch() handlers, displaying user-friendly error messages and logging detailed errors for debugging. For form validation, I use libraries like Formik or React Hook Form with Yup or Zod schemas for declarative validation rules. I handle loading states with skeleton screens or loading indicators to improve perceived performance. For empty states, I design specific UI components that guide users on next steps rather than showing empty lists or blank pages. I also implement global error handling for uncaught exceptions using window.onerror or ErrorBoundary at the app root. Finally, I use monitoring tools like Sentry to track errors in production."
+    }
+  ],
+  "company": [
+    {
+      "question": "Why do you want to work at Tech Innovations Inc.?",
+      "category": "Company Fit",
+      "difficulty": "Medium",
+      "tips": "Research the company's mission, values, products, and culture. Connect your personal values and career goals to the company.",
+      "sampleAnswer": "I'm drawn to Tech Innovations because of your leadership in cloud-based enterprise solutions and your commitment to innovation. Your recent work on microservices architecture for financial institutions aligns perfectly with my experience and interests. I'm particularly impressed by your company culture that emphasizes continuous learning, as evidenced by your education stipend and internal tech talks. Having followed your CTO's technical blog for years, I admire the engineering principles your team follows, especially the focus on scalable, maintainable code. I believe my experience in building high-performance distributed systems would allow me to contribute meaningfully to your team while growing my skills in an environment that values technical excellence."
+    },
+    {
+      "question": "What do you know about our products and services?",
+      "category": "Company Knowledge",
+      "difficulty": "Medium",
+      "tips": "Demonstrate that you've researched the company's offerings, target market, and competitive advantages.",
+      "sampleAnswer": "Tech Innovations specializes in cloud-based enterprise solutions, with your flagship product CloudConnect serving as a middleware platform that integrates legacy systems with modern cloud services. Your recent expansion into AI-powered analytics with DataInsight has positioned you as a leader in the financial services sector, with clients like Capital One and JP Morgan Chase. What sets your products apart is the emphasis on security and compliance, with SOC 2 and GDPR certifications that are crucial for your enterprise clients. I was particularly impressed by your case study with Midwest Financial, where your solutions reduced their operational costs by 30% while improving system reliability. Your product roadmap's focus on edge computing aligns with where I see the industry heading, and I'm excited about the possibility of contributing to these innovations."
+    },
+    {
+      "question": "How would you contribute to our company culture?",
+      "category": "Cultural Fit",
+      "difficulty": "Medium",
+      "tips": "Research the company's values and culture, then connect your personal values and working style to them.",
+      "sampleAnswer": "From my research and conversations with current employees, I understand that Tech Innovations values collaboration, innovation, and continuous learning. I would contribute to this culture in several ways. First, I'm a natural collaborator who thrives in cross-functional teams. In my previous role, I initiated weekly knowledge-sharing sessions that improved team cohesion and technical knowledge transfer. Second, I'm passionate about innovation and regularly explore new technologies and approaches. I've contributed to open-source projects and brought fresh ideas to my teams. Finally, I'm committed to continuous learning and growth, both for myself and those around me. I've mentored junior developers and created learning resources that were adopted company-wide. I believe these qualities would make me a positive addition to your culture while also helping me grow professionally in an environment that aligns with my values."
+    }
+  ]
+}
