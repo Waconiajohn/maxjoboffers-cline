@@ -1,0 +1,609 @@
+app MaxJobOffers {
+  wasp: {
+    version: "^0.16.0"
+  }
+
+  title: "MaxJobOffers"
+
+  head: [
+    "<meta charset='utf-8' />",
+    "<meta name='description' content='Advanced job search platform with AI-powered resume optimization, cover letter generation, and interview preparation.' />",
+    "<meta name='author' content='MaxJobOffers' />",
+    "<meta name='keywords' content='job search, resume, cover letter, interview, AI, career' />",
+
+    "<meta property='og:type' content='website' />",
+    "<meta property='og:title' content='MaxJobOffers' />",
+    "<meta property='og:site_name' content='MaxJobOffers' />",
+    "<meta property='og:url' content='https://maxjoboffers.com' />",
+    "<meta property='og:description' content='Advanced job search platform with AI-powered resume optimization, cover letter generation, and interview preparation.' />",
+    "<meta property='og:image' content='https://maxjoboffers.com/public-banner.webp' />"
+  ]
+
+  // Auth configuration
+  auth: {
+    userEntity: User,
+    methods: {
+      email: {
+        fromField: {
+          name: "MaxJobOffers",
+          email: "noreply@maxjoboffers.com"
+        },
+        emailVerification: {
+          clientRoute: EmailVerificationRoute,
+          getEmailContentFn: import { getVerificationEmailContent } from "@src/auth/email-and-pass/emails"
+        },
+        passwordReset: {
+          clientRoute: PasswordResetRoute,
+          getEmailContentFn: import { getPasswordResetEmailContent } from "@src/auth/email-and-pass/emails"
+        }
+      },
+      google: {
+        configFn: import { getGoogleAuthConfig } from "@src/auth/google/config.js",
+        scope: ["email", "profile"]
+      }
+    },
+    onAuthFailedRedirectTo: "/login",
+    onAuthSucceededRedirectTo: "/dashboard"
+  },
+
+  // Email sending configuration
+  emailSender: {
+    provider: {
+      type: "sendgrid",
+      apiKey: process.env.SENDGRID_API_KEY
+    },
+    defaultFrom: {
+      name: "MaxJobOffers",
+      email: "noreply@maxjoboffers.com"
+    }
+  },
+
+  // File uploads configuration
+  fileUploads: {
+    provider: {
+      type: "s3",
+      region: process.env.AWS_REGION,
+      accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+      secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+      bucket: process.env.AWS_S3_BUCKET
+    },
+    maxSize: 10 * 1024 * 1024, // 10MB
+    allowedFileTypes: ["application/pdf", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"]
+  },
+
+  // Jobs configuration
+  jobs: {
+    resume: {
+      perform: {
+        fn: import { processResume } from "@src/jobs/resume.js",
+        executionStrategy: {
+          type: "WorkerPool",
+          numWorkers: 3,
+          workerIdleTimeout: 10000
+        }
+      },
+      entities: [User, Resume]
+    },
+    coverLetter: {
+      perform: {
+        fn: import { processCoverLetter } from "@src/jobs/coverLetter.js",
+        executionStrategy: {
+          type: "WorkerPool",
+          numWorkers: 2,
+          workerIdleTimeout: 10000
+        }
+      },
+      entities: [User, Resume, Job, CoverLetter]
+    }
+  },
+
+  // Dependencies
+  dependencies: [
+    ("@mui/material", "5.13.0"),
+    ("@mui/icons-material", "5.13.0"),
+    ("@mui/lab", "5.0.0-alpha.129"),
+    ("@aws-sdk/client-s3", "^3.758.0"),
+    ("@aws-sdk/s3-request-presigner", "^3.758.0"),
+    ("openai", "^4.86.1"),
+    ("react-dropzone", "^14.2.3"),
+    ("react-query", "^3.39.0"),
+    ("recharts", "^2.5.0"),
+    ("zustand", "^4.3.8"),
+    ("date-fns", "^2.30.0"),
+    ("prom-client", "^14.2.0"),
+    ("@sentry/react", "^7.64.0"),
+    ("@sentry/tracing", "^7.64.0")
+  ]
+}
+
+// ==================== ENTITIES ====================
+
+entity User {=psl
+  id                      String              @id @default(uuid())
+  email                   String              @unique
+  username                String?
+  password                String?
+  isEmailVerified         Boolean             @default(false)
+  emailVerificationSentAt DateTime?
+  passwordResetSentAt     DateTime?
+  isAdmin                 Boolean             @default(false)
+  stripeCustomerId        String?
+  paymentProcessorUserId  String?
+  subscriptionStatus      String?
+  subscriptionPlanId      String?
+  credits                 Int                 @default(0)
+  lastLoginAt             DateTime?
+  profilePictureUrl       String?
+  createdAt               DateTime            @default(now())
+  updatedAt               DateTime            @updatedAt
+  resumes                 Resume[]
+  applications            JobApplication[]
+  interviews              Interview[]
+  coverLetters            CoverLetter[]
+  linkedInProfile         LinkedInProfile?
+  linkedInPosts           LinkedInPost[]
+  networkingStrategies    NetworkingStrategy[]
+  paymentHistory          PaymentHistory[]
+psl=}
+
+entity Resume {=psl
+  id              String            @id @default(uuid())
+  user            User              @relation(fields: [userId], references: [id])
+  userId          String
+  title           String
+  content         String            @db.Text
+  fileUrl         String?
+  version         Int               @default(1)
+  format          String?
+  isAtsOptimized  Boolean           @default(false)
+  matchScore      Int?
+  keywords        String[]
+  parentResumeId  String?
+  parentResume    Resume?           @relation("ResumeVersions", fields: [parentResumeId], references: [id])
+  childResumes    Resume[]          @relation("ResumeVersions")
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  applications    JobApplication[]
+psl=}
+
+entity Job {=psl
+  id              String            @id @default(uuid())
+  title           String
+  company         String
+  location        String?
+  description     String            @db.Text
+  requirements    String?           @db.Text
+  salary          Json?
+  applicationUrl  String?
+  source          String?
+  jobType         String?           // full-time, part-time, contract, etc.
+  experienceLevel String?           // entry, mid, senior, etc.
+  industry        String?
+  skills          String[]
+  benefits        String[]
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  applications    JobApplication[]
+  savedBy         SavedJob[]
+psl=}
+
+entity JobApplication {=psl
+  id              String            @id @default(uuid())
+  user            User              @relation(fields: [userId], references: [id])
+  userId          String
+  job             Job               @relation(fields: [jobId], references: [id])
+  jobId           String
+  resume          Resume?           @relation(fields: [resumeId], references: [id])
+  resumeId        String?
+  coverLetter     CoverLetter?      @relation(fields: [coverLetterId], references: [id])
+  coverLetterId   String?
+  status          String            @default("applied")
+  appliedDate     DateTime          @default(now())
+  followUpDate    DateTime?
+  notes           String?           @db.Text
+  rejectionReason String?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  interviews      Interview[]
+  statusHistory   ApplicationStatusHistory[]
+psl=}
+
+entity CoverLetter {=psl
+  id              String            @id @default(uuid())
+  user            User              @relation(fields: [userId], references: [id])
+  userId          String
+  title           String
+  content         String            @db.Text
+  jobId           String?           // Optional reference to the job this cover letter was created for
+  resumeId        String?           // Optional reference to the resume this cover letter is based on
+  format          String?           // Style/format of the cover letter
+  version         Int               @default(1)
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  applications    JobApplication[]
+psl=}
+
+entity Interview {=psl
+  id                String            @id @default(uuid())
+  user              User              @relation(fields: [userId], references: [id])
+  userId            String
+  jobApplication    JobApplication    @relation(fields: [jobApplicationId], references: [id])
+  jobApplicationId  String
+  type              String            @default("behavioral")
+  round             Int               @default(1)
+  interviewers      String[]
+  date              DateTime?
+  duration          Int?              // Duration in minutes
+  location          String?           // Physical location or virtual platform
+  notes             String?           @db.Text
+  feedback          String?           @db.Text
+  questions         InterviewQuestion[]
+  recordings        InterviewRecording[]
+  overallScore      Int?
+  status            String            @default("scheduled") // scheduled, completed, cancelled
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+psl=}
+
+entity InterviewQuestion {=psl
+  id              String            @id @default(uuid())
+  interview       Interview         @relation(fields: [interviewId], references: [id])
+  interviewId     String
+  question        String            @db.Text
+  answer          String?           @db.Text
+  feedback        String?           @db.Text
+  score           Int?
+  category        String?
+  difficulty      String?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+psl=}
+
+entity InterviewRecording {=psl
+  id              String            @id @default(uuid())
+  interview       Interview         @relation(fields: [interviewId], references: [id])
+  interviewId     String
+  question        InterviewQuestion @relation(fields: [questionId], references: [id])
+  questionId      String
+  recordingUrl    String
+  createdAt       DateTime          @default(now())
+psl=}
+
+entity LinkedInProfile {=psl
+  id              String            @id @default(uuid())
+  user            User              @relation(fields: [userId], references: [id])
+  userId          String            @unique
+  headline        String
+  summary         String            @db.Text
+  sections        Json
+  keywords        String[]
+  optimizationScore Int
+  profileUrl      String?
+  connections     Int?
+  recommendations Json?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+psl=}
+
+entity LinkedInPost {=psl
+  id              String            @id @default(uuid())
+  user            User              @relation(fields: [userId], references: [id])
+  userId          String
+  title           String
+  content         String            @db.Text
+  hashtags        String[]
+  suggestedImage  String?
+  engagementTips  String[]
+  publishDate     DateTime?
+  status          String            @default("draft") // draft, published, scheduled
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+psl=}
+
+entity NetworkingStrategy {=psl
+  id                String            @id @default(uuid())
+  user              User              @relation(fields: [userId], references: [id])
+  userId            String
+  title             String
+  summary           String            @db.Text
+  connectionStrategies Json
+  contentStrategy   Json
+  outreachTemplates Json
+  kpis              Json
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+psl=}
+
+entity SavedJob {=psl
+  id              String            @id @default(uuid())
+  user            User              @relation(fields: [userId], references: [id])
+  userId          String
+  job             Job               @relation(fields: [jobId], references: [id])
+  jobId           String
+  notes           String?           @db.Text
+  savedAt         DateTime          @default(now())
+  
+  @@unique([userId, jobId])
+psl=}
+
+entity ApplicationStatusHistory {=psl
+  id                String            @id @default(uuid())
+  application       JobApplication    @relation(fields: [applicationId], references: [id])
+  applicationId     String
+  status            String
+  date              DateTime          @default(now())
+  notes             String?           @db.Text
+psl=}
+
+entity PaymentHistory {=psl
+  id                String            @id @default(uuid())
+  user              User              @relation(fields: [userId], references: [id])
+  userId            String
+  amount            Float
+  currency          String            @default("USD")
+  description       String
+  paymentMethod     String
+  status            String
+  stripePaymentId   String?
+  createdAt         DateTime          @default(now())
+psl=}
+
+// ==================== ROUTES ====================
+
+route LandingPageRoute { path: "/", to: LandingPage }
+route DashboardRoute { path: "/dashboard", to: DashboardPage, authRequired: true }
+route LoginRoute { path: "/login", to: LoginPage }
+route SignupRoute { path: "/signup", to: SignupPage }
+route EmailVerificationRoute { path: "/email-verification", to: EmailVerificationPage }
+route PasswordResetRoute { path: "/reset-password/:token", to: ResetPasswordPage }
+route ForgotPasswordRoute { path: "/forgot-password", to: ForgotPasswordPage }
+
+route ResumeListRoute { path: "/resumes", to: ResumeListPage, authRequired: true }
+route ResumeUploadRoute { path: "/resumes/new", to: ResumeUploadPage, authRequired: true }
+route ResumeDetailRoute { path: "/resumes/:id", to: ResumeDetailPage, authRequired: true }
+route JobSearchRoute { path: "/jobs/search", to: JobSearchPage, authRequired: true }
+route JobDetailRoute { path: "/jobs/:id", to: JobDetailPage, authRequired: true }
+route CoverLetterListRoute { path: "/cover-letters", to: CoverLetterListPage, authRequired: true }
+route InterviewPrepRoute { path: "/interviews", to: InterviewPrepPage, authRequired: true }
+route InterviewSessionRoute { path: "/interviews/:id", to: InterviewSessionPage, authRequired: true }
+route LinkedInContentRoute { path: "/linkedin-content", to: LinkedInContentPage, authRequired: true }
+route LinkedInPostRoute { path: "/linkedin-content/:id", to: LinkedInPostPage, authRequired: true }
+route NetworkingStrategyRoute { path: "/networking-strategy/:id", to: NetworkingStrategyPage, authRequired: true }
+route UserProfileRoute { path: "/profile", to: UserProfilePage, authRequired: true }
+
+// ==================== PAGES ====================
+
+page LandingPage {
+  component: import { LandingPage } from "@src/pages/LandingPage"
+}
+
+page DashboardPage {
+  component: import { DashboardPage } from "@src/pages/DashboardPage",
+  authRequired: true
+}
+
+page LoginPage {
+  component: import { LoginPage } from "@src/pages/LoginPage"
+}
+
+page SignupPage {
+  component: import { SignupPage } from "@src/pages/SignupPage"
+}
+
+page EmailVerificationPage {
+  component: import { EmailVerificationPage } from "@src/pages/EmailVerificationPage"
+}
+
+page ResetPasswordPage {
+  component: import { ResetPasswordPage } from "@src/pages/ResetPasswordPage"
+}
+
+page ForgotPasswordPage {
+  component: import { ForgotPasswordPage } from "@src/pages/ForgotPasswordPage"
+}
+
+page ResumeListPage {
+  component: import { ResumeListPage } from "@src/pages/ResumeListPage",
+  authRequired: true
+}
+
+page ResumeUploadPage {
+  component: import { ResumeUploadPage } from "@src/pages/ResumeUploadPage",
+  authRequired: true
+}
+
+page ResumeDetailPage {
+  component: import { ResumeDetailPage } from "@src/pages/ResumeDetailPage",
+  authRequired: true
+}
+
+page JobSearchPage {
+  component: import { JobSearchPage } from "@src/pages/JobSearchPage",
+  authRequired: true
+}
+
+page JobDetailPage {
+  component: import { JobDetailPage } from "@src/pages/JobDetailPage",
+  authRequired: true
+}
+
+page CoverLetterListPage {
+  component: import { CoverLetterListPage } from "@src/pages/CoverLetterListPage",
+  authRequired: true
+}
+
+page InterviewPrepPage {
+  component: import { InterviewPrepPage } from "@src/pages/InterviewPrepPage",
+  authRequired: true
+}
+
+page InterviewSessionPage {
+  component: import { InterviewSessionPage } from "@src/pages/InterviewSessionPage",
+  authRequired: true
+}
+
+page LinkedInContentPage {
+  component: import { LinkedInContentPage } from "@src/pages/LinkedInContentPage",
+  authRequired: true
+}
+
+page LinkedInPostPage {
+  component: import { LinkedInPostPage } from "@src/pages/LinkedInPostPage",
+  authRequired: true
+}
+
+page NetworkingStrategyPage {
+  component: import { NetworkingStrategyPage } from "@src/pages/NetworkingStrategyPage",
+  authRequired: true
+}
+
+page UserProfilePage {
+  component: import { UserProfilePage } from "@src/pages/UserProfilePage",
+  authRequired: true
+}
+
+// ==================== ACTIONS ====================
+
+// Resume Actions
+action uploadResume {
+  fn: import { uploadResume } from "@src/actions/resume",
+  entities: [User, Resume]
+}
+
+action analyzeResume {
+  fn: import { analyzeResume } from "@src/actions/resume",
+  entities: [User, Resume]
+}
+
+action changeResumeFormat {
+  fn: import { changeResumeFormat } from "@src/actions/resume",
+  entities: [User, Resume]
+}
+
+// Job Actions
+action searchJobs {
+  fn: import { searchJobs } from "@src/actions/job",
+  entities: [User, Job]
+}
+
+action applyToJob {
+  fn: import { applyToJob } from "@src/actions/job",
+  entities: [User, Job, Resume, CoverLetter, JobApplication]
+}
+
+// Cover Letter Actions
+action generateCoverLetter {
+  fn: import { generateCoverLetter } from "@src/actions/coverLetter",
+  entities: [User, Resume, Job, CoverLetter]
+}
+
+// Interview Actions
+action createMockInterview {
+  fn: import { createMockInterview } from "@src/actions/interview",
+  entities: [User, JobApplication, Interview, InterviewQuestion]
+}
+
+action saveRecording {
+  fn: import { saveRecording } from "@src/actions/interview",
+  entities: [User, Interview, InterviewQuestion, InterviewRecording]
+}
+
+action submitAnswer {
+  fn: import { submitAnswer } from "@src/actions/interview",
+  entities: [User, Interview, InterviewQuestion]
+}
+
+action researchCompany {
+  fn: import { researchCompany } from "@src/actions/interview",
+  entities: [User]
+}
+
+// LinkedIn Actions
+action generateLinkedInProfile {
+  fn: import { generateLinkedInProfile } from "@src/actions/linkedin",
+  entities: [User, Resume, LinkedInProfile]
+}
+
+// Financial Actions
+action generateFinancialPlan {
+  fn: import { generateFinancialPlan } from "@src/actions/financial",
+  entities: [User]
+}
+
+// Payment Actions
+action createCheckoutSession {
+  fn: import { createCheckoutSession } from "@src/actions/payment",
+  entities: [User]
+}
+
+action updateSubscription {
+  fn: import { updateSubscription } from "@src/actions/payment",
+  entities: [User]
+}
+
+// ==================== QUERIES ====================
+
+// User Queries
+query getUser {
+  fn: import { getUser } from "@src/queries/user",
+  entities: [User]
+}
+
+// Resume Queries
+query getResumes {
+  fn: import { getResumes } from "@src/queries/resume",
+  entities: [User, Resume]
+}
+
+query getResumeById {
+  fn: import { getResumeById } from "@src/queries/resume",
+  entities: [User, Resume]
+}
+
+// Job Queries
+query getJobs {
+  fn: import { getJobs } from "@src/queries/job",
+  entities: [Job]
+}
+
+query getJobById {
+  fn: import { getJobById } from "@src/queries/job",
+  entities: [Job]
+}
+
+// Application Queries
+query getJobApplications {
+  fn: import { getJobApplications } from "@src/queries/job",
+  entities: [User, JobApplication, Job, Resume, CoverLetter]
+}
+
+// Interview Queries
+query getInterviews {
+  fn: import { getInterviews } from "@src/queries/interview",
+  entities: [User, Interview, JobApplication, Job]
+}
+
+query getInterviewById {
+  fn: import { getInterviewById } from "@src/queries/interview",
+  entities: [User, Interview, InterviewQuestion, InterviewRecording, JobApplication, Job]
+}
+
+// Cover Letter Queries
+query getCoverLetters {
+  fn: import { getCoverLetters } from "@src/queries/coverLetter",
+  entities: [User, CoverLetter]
+}
+
+// LinkedIn Queries
+query getLinkedInProfile {
+  fn: import { getLinkedInProfile } from "@src/queries/linkedin",
+  entities: [User, LinkedInProfile]
+}
+
+// ==================== API ROUTES ====================
+
+api stripeWebhook {
+  fn: import { stripeWebhook } from "@src/api/payment/stripe",
+  entities: [User],
+  httpRoute: (POST, "/stripe-webhook")
+}
