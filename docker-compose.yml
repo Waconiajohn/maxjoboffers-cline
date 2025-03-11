@@ -1,0 +1,53 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+      - "3001:3001"
+    volumes:
+      - .:/app
+      - /app/node_modules
+    environment:
+      - NODE_ENV=development
+      - DATABASE_URL=${DATABASE_URL}
+      - JWT_SECRET=${JWT_SECRET}
+      - SESSION_SECRET=${SESSION_SECRET}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - AWS_REGION=${AWS_REGION}
+      - AWS_S3_BUCKET=${AWS_S3_BUCKET}
+      - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY}
+      - STRIPE_WEBHOOK_SECRET=${STRIPE_WEBHOOK_SECRET}
+      - STRIPE_PUBLISHABLE_KEY=${STRIPE_PUBLISHABLE_KEY}
+      - SENDGRID_API_KEY=${SENDGRID_API_KEY}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+      - GOOGLE_JOBS_API_KEY=${GOOGLE_JOBS_API_KEY}
+      - PAYMENTS_BASIC_SUBSCRIPTION_PLAN_ID=${PAYMENTS_BASIC_SUBSCRIPTION_PLAN_ID}
+      - PAYMENTS_PROFESSIONAL_SUBSCRIPTION_PLAN_ID=${PAYMENTS_PROFESSIONAL_SUBSCRIPTION_PLAN_ID}
+      - PAYMENTS_ENTERPRISE_SUBSCRIPTION_PLAN_ID=${PAYMENTS_ENTERPRISE_SUBSCRIPTION_PLAN_ID}
+      - PAYMENTS_CREDITS_10_PLAN_ID=${PAYMENTS_CREDITS_10_PLAN_ID}
+      - PAYMENTS_CREDITS_50_PLAN_ID=${PAYMENTS_CREDITS_50_PLAN_ID}
+      - PAYMENTS_CREDITS_100_PLAN_ID=${PAYMENTS_CREDITS_100_PLAN_ID}
+    networks:
+      - maxjoboffers-network
+
+  stripe-cli:
+    image: stripe/stripe-cli
+    command: listen --forward-to app:3001/stripe-webhook
+    environment:
+      - STRIPE_API_KEY=${STRIPE_SECRET_KEY}
+      - STRIPE_DEVICE_NAME=docker-container
+    depends_on:
+      - app
+    networks:
+      - maxjoboffers-network
+
+networks:
+  maxjoboffers-network:
+    driver: bridge
