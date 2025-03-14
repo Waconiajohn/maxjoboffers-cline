@@ -15,9 +15,6 @@
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
-    "docker:up": "docker-compose up -d",
-    "docker:down": "docker-compose down",
-    "docker:build": "docker build -t maxjoboffers ."
   },
   "dependencies": {
     "@headlessui/react": "^1.7.17",

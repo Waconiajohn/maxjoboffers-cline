@@ -97,7 +97,7 @@ PAYMENTS_CREDITS_100_PLAN_ID=your-credits-100-plan-id
 
 3. Build and start the Docker containers:
    ```bash
-   docker-compose up -d
+   npm start
    ```
 
 4. The application will be available at:
@@ -164,14 +164,10 @@ The built application will be in the `.wasp/build` directory.
 
 1. Build the Docker image:
    ```bash
-   docker build -t maxjoboffers .
    ```
 
 2. Push the image to Amazon ECR:
    ```bash
-   aws ecr get-login-password --region your-region | docker login --username AWS --password-stdin your-account-id.dkr.ecr.your-region.amazonaws.com
-   docker tag maxjoboffers:latest your-account-id.dkr.ecr.your-region.amazonaws.com/maxjoboffers:latest
-   docker push your-account-id.dkr.ecr.your-region.amazonaws.com/maxjoboffers:latest
    ```
 
 3. Deploy using AWS ECS or Elastic Beanstalk.

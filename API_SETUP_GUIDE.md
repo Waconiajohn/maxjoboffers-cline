@@ -14,7 +14,6 @@ This guide provides instructions for setting up all the external APIs and servic
 
 ## Environment Variables
 
-The application uses environment variables to store API keys and credentials. These are referenced in the docker-compose.yml file. You should create a `.env` file in the root directory of the project with the following variables:
 
 ```
 # JWT and Session
@@ -170,7 +169,6 @@ The application uses AWS infrastructure for both the database and compute resour
 
 ## Development Environment
 
-Your development environment is set up using Docker Compose. The `docker-compose.yml` file defines the following services:
 
 1. `app`: The main application container
 2. `stripe-cli`: Stripe CLI for forwarding webhook events to your local environment
@@ -179,17 +177,14 @@ To start the development environment:
 
 ```bash
 # Start all services
-docker-compose up
 
 # Start in detached mode
-docker-compose up -d
 ```
 
 To stop the development environment:
 
 ```bash
 # Stop all services
-docker-compose down
 ```
 
 ## Next Steps
