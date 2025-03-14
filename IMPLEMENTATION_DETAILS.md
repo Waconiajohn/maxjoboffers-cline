@@ -38,7 +38,7 @@ MaxJobOffers is built using a modern web application architecture with the follo
 
 ### Deployment
 
-- **Containerization**: Docker and Docker Compose
+- **Containerization**: AWS EC2 and AWS RDS
 - **Cloud Provider**: AWS (ECS, RDS, S3, etc.)
 - **CI/CD**: GitHub Actions
 
@@ -381,10 +381,7 @@ LinkedInProfile {
 
 ## Deployment and DevOps
 
-### Docker Setup
 
-- Multi-stage Dockerfile for optimized builds
-- Docker Compose for local development
 - Volume mounting for development convenience
 
 ### AWS Deployment
