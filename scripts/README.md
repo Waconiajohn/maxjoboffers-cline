@@ -52,7 +52,16 @@ Then try your operation again.
 
 ### Schema Not Found
 
-If the generate-prisma.js script can't find the schema.prisma file, make sure you've run `wasp start` at least once to generate the Wasp output files.
+If the generate-prisma.js script can't find the schema.prisma file, you have two options:
+
+1. Run `wasp start` at least once to generate the Wasp output files, which include the schema.prisma file.
+
+2. Create a custom schema.prisma file by running:
+```
+node scripts/generate-prisma.js --create-custom
+```
+
+This will create a basic schema.prisma file in the prisma directory that can be used to generate the Prisma client. This is useful for development and testing when you don't have access to the Wasp-generated schema.
 
 ## Best Practices
 

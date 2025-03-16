@@ -17,8 +17,49 @@ const path = require('path');
 const possibleSchemaLocations = [
   path.join(__dirname, '..', '.wasp', 'out', 'db', 'schema.prisma'),
   path.join(__dirname, '..', '.wasp', 'build', 'db', 'schema.prisma'),
-  path.join(__dirname, '..', '.wasp', 'db', 'schema.prisma')
+  path.join(__dirname, '..', '.wasp', 'db', 'schema.prisma'),
+  // Add more potential locations if needed
 ];
+
+// Check if a custom schema.prisma file exists in the project
+const customSchemaPath = path.join(__dirname, '..', 'prisma', 'schema.prisma');
+
+async function createCustomSchema() {
+  console.log('Creating a custom schema.prisma file...');
+  
+  // Create the prisma directory if it doesn't exist
+  const prismaDir = path.join(__dirname, '..', 'prisma');
+  if (!fs.existsSync(prismaDir)) {
+    fs.mkdirSync(prismaDir, { recursive: true });
+  }
+  
+  // Create a basic schema.prisma file
+  const schemaContent = `
+// This is a temporary schema.prisma file created by generate-prisma.js
+// It should be replaced by the Wasp-generated schema when you run 'wasp start'
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// Define your models here
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+`;
+  
+  fs.writeFileSync(customSchemaPath, schemaContent);
+  console.log(`Created custom schema.prisma at: ${customSchemaPath}`);
+  return customSchemaPath;
+}
 
 async function main() {
   console.log('Looking for Wasp-generated schema.prisma file...');
@@ -32,14 +73,30 @@ async function main() {
     }
   }
   
+  // Check for custom schema
+  if (!schemaPath && fs.existsSync(customSchemaPath)) {
+    schemaPath = customSchemaPath;
+  }
+  
   if (!schemaPath) {
     console.error('Could not find schema.prisma file. Make sure Wasp has generated it.');
     console.error('Possible locations checked:');
     possibleSchemaLocations.forEach(loc => console.error(`- ${loc}`));
-    process.exit(1);
+    
+    console.log('\nYou need to run "wasp start" at least once to generate the schema.prisma file.');
+    console.log('Alternatively, you can create a custom schema.prisma file in the prisma directory.');
+    
+    const createCustom = process.argv.includes('--create-custom');
+    if (createCustom) {
+      schemaPath = await createCustomSchema();
+    } else {
+      console.log('\nTo create a custom schema.prisma file, run:');
+      console.log('node scripts/generate-prisma.js --create-custom');
+      process.exit(1);
+    }
   }
   
-  console.log(`Found schema.prisma at: ${schemaPath}`);
+  console.log(`Using schema.prisma at: ${schemaPath}`);
   
   // Run prisma generate
   console.log('Running prisma generate...');
