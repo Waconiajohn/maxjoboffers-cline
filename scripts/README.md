@@ -20,6 +20,25 @@ Usage:
 node scripts/generate-prisma.js
 ```
 
+If the schema.prisma file doesn't exist, you can create a custom one:
+```
+node scripts/generate-prisma.js --create-custom
+```
+
+### init-database.js
+
+This script initializes the database schema using Prisma. It:
+
+1. Uses the schema.prisma file to create the initial database schema
+2. Creates all the tables needed for the application
+
+Usage:
+```
+node scripts/init-database.js
+```
+
+This script should be run before run-migration.js to ensure that all the required tables exist in the database.
+
 ### run-migration.js
 
 This script runs database migrations safely. It:

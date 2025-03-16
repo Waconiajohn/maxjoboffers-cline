@@ -1,0 +1,199 @@
+// This is a comprehensive schema.prisma file for the MaxJobOffers application
+// It includes all tables referenced in the migration script
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id                 String               @id @default(uuid())
+  email              String               @unique
+  name               String?
+  password           String?
+  lastLoginAt        DateTime?
+  profilePictureUrl  String?
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+  resumes            Resume[]
+  jobApplications    JobApplication[]
+  coverLetters       CoverLetter[]
+  interviews         Interview[]
+  linkedInProfile    LinkedInProfile?
+  linkedInPosts      LinkedInPost[]
+  networkingStrategies NetworkingStrategy[]
+  savedJobs          SavedJob[]
+  paymentHistory     PaymentHistory[]
+}
+
+model Resume {
+  id                 String               @id @default(uuid())
+  userId             String
+  title              String
+  content            String
+  matchScore         Int?
+  keywords           String[]             @default([])
+  parentResumeId     String?
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+  user               User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  parentResume       Resume?              @relation("ResumeVersions", fields: [parentResumeId], references: [id], onDelete: SetNull)
+  childResumes       Resume[]             @relation("ResumeVersions")
+  jobApplications    JobApplication[]
+  coverLetters       CoverLetter[]
+}
+
+model Job {
+  id                 String               @id @default(uuid())
+  title              String
+  company            String
+  location           String
+  description        String
+  salary             String?
+  url                String?
+  jobType            String?
+  experienceLevel    String?
+  industry           String?
+  skills             String[]             @default([])
+  benefits           String[]             @default([])
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+  jobApplications    JobApplication[]
+  coverLetters       CoverLetter[]
+  savedJobs          SavedJob[]
+}
+
+model JobApplication {
+  id                 String               @id @default(uuid())
+  userId             String
+  jobId              String
+  resumeId           String?
+  coverLetterId      String?
+  status             String
+  appliedDate        DateTime             @default(now())
+  followUpDate       DateTime?
+  notes              String?
+  rejectionReason    String?
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+  user               User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  job                Job                  @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  resume             Resume?              @relation(fields: [resumeId], references: [id], onDelete: SetNull)
+  coverLetter        CoverLetter?         @relation(fields: [coverLetterId], references: [id], onDelete: SetNull)
+  interviews         Interview[]
+  statusHistory      ApplicationStatusHistory[]
+}
+
+model CoverLetter {
+  id                 String               @id @default(uuid())
+  userId             String
+  title              String
+  content            String
+  jobId              String?
+  resumeId           String?
+  format             String?
+  version            Int                  @default(1)
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+  user               User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  job                Job?                 @relation(fields: [jobId], references: [id], onDelete: SetNull)
+  resume             Resume?              @relation(fields: [resumeId], references: [id], onDelete: SetNull)
+  jobApplications    JobApplication[]
+}
+
+model Interview {
+  id                 String               @id @default(uuid())
+  userId             String
+  jobApplicationId   String
+  date               DateTime
+  round              Int                  @default(1)
+  interviewers       String[]             @default([])
+  duration           Int?
+  location           String?
+  feedback           String?
+  status             String               @default("scheduled")
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+  user               User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  jobApplication     JobApplication       @relation(fields: [jobApplicationId], references: [id], onDelete: Cascade)
+}
+
+model LinkedInProfile {
+  id                 String               @id @default(uuid())
+  userId             String               @unique
+  headline           String?
+  summary            String?
+  profileUrl         String?
+  connections        Int?
+  recommendations    Json?
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+  user               User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model LinkedInPost {
+  id                 String               @id @default(uuid())
+  userId             String
+  title              String
+  content            String
+  hashtags           String[]             @default([])
+  suggestedImage     String?
+  engagementTips     String[]             @default([])
+  publishDate        DateTime?
+  status             String               @default("draft")
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+  user               User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model NetworkingStrategy {
+  id                 String               @id @default(uuid())
+  userId             String
+  title              String
+  summary            String
+  connectionStrategies Json
+  contentStrategy    Json
+  outreachTemplates  Json
+  kpis               Json
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+  user               User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model SavedJob {
+  id                 String               @id @default(uuid())
+  userId             String
+  jobId              String
+  notes              String?
+  savedAt            DateTime             @default(now())
+  user               User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  job                Job                  @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, jobId])
+}
+
+model ApplicationStatusHistory {
+  id                 String               @id @default(uuid())
+  applicationId      String
+  status             String
+  date               DateTime             @default(now())
+  notes              String?
+  jobApplication     JobApplication       @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+}
+
+model PaymentHistory {
+  id                 String               @id @default(uuid())
+  userId             String
+  amount             Decimal              @db.Decimal(10, 2)
+  currency           String               @default("USD")
+  description        String
+  paymentMethod      String
+  status             String
+  stripePaymentId    String?
+  createdAt          DateTime             @default(now())
+  user               User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
