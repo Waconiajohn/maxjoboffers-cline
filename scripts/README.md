@@ -70,6 +70,22 @@ psql [DATABASE_URL] -f scripts/create-tables.sql
 
 This can be used directly with psql or through the init-database-sql.js script.
 
+### verify-database.js
+
+This script verifies the database schema. It:
+
+1. Connects to the database
+2. Lists all tables
+3. Verifies that the expected tables exist
+4. Shows row counts for each table
+
+Usage:
+```
+node scripts/verify-database.js
+```
+
+This script is useful for confirming that the database schema has been set up correctly.
+
 ### run-migration.js
 
 This script runs database migrations safely. It:
