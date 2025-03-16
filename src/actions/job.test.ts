@@ -1,10 +1,10 @@
-import { describe, it, expect, beforeEach, jest } from '@jest/globals';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { searchJobs, applyToJob } from './job';
 import { HttpError } from 'wasp/server';
 
 // Mock axios
-jest.mock('axios', () => ({
-  get: jest.fn().mockResolvedValue({
+vi.mock('axios', () => ({
+  get: vi.fn().mockResolvedValue({
     data: {
       jobs: [
         {
@@ -28,26 +28,26 @@ const mockContext = {
   user: { id: 'user-123' },
   entities: {
     Job: {
-      findFirst: jest.fn(),
-      findUnique: jest.fn(),
-      create: jest.fn()
+      findFirst: vi.fn(),
+      findUnique: vi.fn(),
+      create: vi.fn()
     },
     Resume: {
-      findUnique: jest.fn()
+      findUnique: vi.fn()
     },
     CoverLetter: {
-      findUnique: jest.fn()
+      findUnique: vi.fn()
     },
     JobApplication: {
-      findFirst: jest.fn(),
-      create: jest.fn()
+      findFirst: vi.fn(),
+      create: vi.fn()
     }
   }
 };
 
 describe('Job Actions', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     process.env.GOOGLE_JOBS_API_KEY = 'test-google-jobs-api-key';
   });
 

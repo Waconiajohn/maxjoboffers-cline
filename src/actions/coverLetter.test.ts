@@ -1,18 +1,18 @@
-import { describe, it, expect, beforeEach, jest } from '@jest/globals';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { generateCoverLetter } from './coverLetter';
 import { HttpError } from 'wasp/server';
 import { hasActiveSubscription } from '../payment/subscriptionUtils';
 
 // Mock dependencies
-jest.mock('../payment/subscriptionUtils', () => ({
-  hasActiveSubscription: jest.fn()
+vi.mock('../payment/subscriptionUtils', () => ({
+  hasActiveSubscription: vi.fn()
 }));
 
-jest.mock('openai', () => {
-  return jest.fn().mockImplementation(() => ({
+vi.mock('openai', () => {
+  return vi.fn().mockImplementation(() => ({
     chat: {
       completions: {
-        create: jest.fn().mockResolvedValue({
+        create: vi.fn().mockResolvedValue({
           choices: [
             {
               message: {
@@ -31,28 +31,28 @@ const mockContext = {
   user: { id: 'user-123' },
   entities: {
     User: {
-      findUnique: jest.fn(),
-      update: jest.fn()
+      findUnique: vi.fn(),
+      update: vi.fn()
     },
     Resume: {
-      findUnique: jest.fn()
+      findUnique: vi.fn()
     },
     Job: {
-      findUnique: jest.fn()
+      findUnique: vi.fn()
     },
     CoverLetter: {
-      create: jest.fn()
+      create: vi.fn()
     }
   }
 };
 
 describe('Cover Letter Actions', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     process.env.OPENAI_API_KEY = 'test-openai-api-key';
     
     // Default mock implementations
-    (hasActiveSubscription as jest.Mock).mockReturnValue(false);
+    (hasActiveSubscription as vi.Mock).mockReturnValue(false);
     
     mockContext.entities.User.findUnique.mockResolvedValue({
       id: 'user-123',
@@ -102,7 +102,7 @@ describe('Cover Letter Actions', () => {
     });
 
     it('should not decrement credits if user has subscription', async () => {
-      (hasActiveSubscription as jest.Mock).mockReturnValue(true);
+      (hasActiveSubscription as vi.Mock).mockReturnValue(true);
 
       const result = await generateCoverLetter(
         { resumeId: 'resume-123', jobId: 'job-123' },
@@ -176,11 +176,11 @@ describe('Cover Letter Actions', () => {
 
     it('should handle OpenAI API errors', async () => {
       // Mock OpenAI to throw an error
-      jest.mock('openai', () => {
-        return jest.fn().mockImplementation(() => ({
+      vi.mock('openai', () => {
+        return vi.fn().mockImplementation(() => ({
           chat: {
             completions: {
-              create: jest.fn().mockRejectedValue(new Error('OpenAI API error'))
+              create: vi.fn().mockRejectedValue(new Error('OpenAI API error'))
             }
           }
         }));
@@ -196,11 +196,11 @@ describe('Cover Letter Actions', () => {
 
     it('should handle empty response from OpenAI', async () => {
       // Mock OpenAI to return empty content
-      jest.mock('openai', () => {
-        return jest.fn().mockImplementation(() => ({
+      vi.mock('openai', () => {
+        return vi.fn().mockImplementation(() => ({
           chat: {
             completions: {
-              create: jest.fn().mockResolvedValue({
+              create: vi.fn().mockResolvedValue({
                 choices: [
                   {
                     message: {

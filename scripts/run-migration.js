@@ -2,21 +2,22 @@
  * Script to run the database migration and verify the schema updates
  * 
  * This script:
- * 1. Backs up the database
- * 2. Runs the migration script
- * 3. Verifies the schema has been updated correctly
+ * 1. Generates the Prisma client from the Wasp-generated schema
+ * 2. Backs up the database
+ * 3. Runs the migration script
+ * 4. Verifies the schema has been updated correctly
  * 
  * Usage:
  * node scripts/run-migration.js
  */
 
 const { spawn, execSync } = require('child_process');
-const { PrismaClient } = require('@prisma/client');
 const fs = require('fs');
 const path = require('path');
 const readline = require('readline');
 
-const prisma = new PrismaClient();
+// We'll initialize Prisma client after generating it
+let prisma;
 const migrationPath = path.join(__dirname, '..', 'migrations', '20250307_schema_update.js');
 
 // Create readline interface for user input
@@ -245,6 +246,38 @@ async function restoreBackup(backupFile) {
 }
 
 /**
+ * Generate Prisma client
+ */
+async function generatePrismaClient() {
+  console.log('Generating Prisma client...');
+  
+  return new Promise((resolve, reject) => {
+    const generateScript = spawn('node', [path.join(__dirname, 'generate-prisma.js')], { 
+      stdio: 'inherit',
+      shell: true
+    });
+    
+    generateScript.on('close', (code) => {
+      if (code === 0) {
+        console.log('Prisma client generated successfully.');
+        // Now we can import and initialize the Prisma client
+        const { PrismaClient } = require('@prisma/client');
+        prisma = new PrismaClient();
+        resolve();
+      } else {
+        console.error(`Prisma client generation failed with code ${code}`);
+        reject(new Error(`Prisma client generation failed with code ${code}`));
+      }
+    });
+    
+    generateScript.on('error', (err) => {
+      console.error('Failed to start Prisma client generation process:', err);
+      reject(err);
+    });
+  });
+}
+
+/**
  * Main function
  */
 async function main() {
@@ -262,7 +295,10 @@ async function main() {
     let backupFile;
     
     try {
-      // Step 1: Backup the database
+      // Step 1: Generate Prisma client
+      await generatePrismaClient();
+      
+      // Step 2: Backup the database
       backupFile = await backupDatabase();
       
       // Step 2: Run the migration

@@ -7,16 +7,55 @@
  * 
  * To run this migration:
  * 1. Make sure the database is backed up
- * 2. Run: node migrations/20250307_schema_update.js
+ * 2. Run: node scripts/run-migration.js
+ * 
+ * Note: This script should not be run directly, but through the run-migration.js script
+ * which handles Prisma client generation and database backup.
  */
 
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+const { spawn } = require('child_process');
+const path = require('path');
+
+// We'll initialize Prisma client after generating it
+let prisma;
+
+// Generate Prisma client before using it
+async function generatePrismaClient() {
+  console.log('Generating Prisma client...');
+  
+  return new Promise((resolve, reject) => {
+    const generateScript = spawn('node', [path.join(__dirname, '..', 'scripts', 'generate-prisma.js')], { 
+      stdio: 'inherit',
+      shell: true
+    });
+    
+    generateScript.on('close', (code) => {
+      if (code === 0) {
+        console.log('Prisma client generated successfully.');
+        // Now we can import and initialize the Prisma client
+        const { PrismaClient } = require('@prisma/client');
+        prisma = new PrismaClient();
+        resolve();
+      } else {
+        console.error(`Prisma client generation failed with code ${code}`);
+        reject(new Error(`Prisma client generation failed with code ${code}`));
+      }
+    });
+    
+    generateScript.on('error', (err) => {
+      console.error('Failed to start Prisma client generation process:', err);
+      reject(err);
+    });
+  });
+}
 
 async function main() {
   console.log('Starting database migration...');
 
   try {
+    // First, generate the Prisma client
+    await generatePrismaClient();
+    
     // Step 1: Add new fields to existing tables
     console.log('Adding new fields to existing tables...');
     

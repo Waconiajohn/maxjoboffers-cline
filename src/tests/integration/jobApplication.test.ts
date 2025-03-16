@@ -1,23 +1,23 @@
-import { describe, it, expect, beforeEach, jest, afterAll } from '@jest/globals';
+import { describe, it, expect, beforeEach, afterAll, vi } from 'vitest';
 import { searchJobs, applyToJob } from '../../actions/job';
 import { uploadResume, analyzeResume, changeResumeFormat } from '../../actions/resume';
 import { generateCoverLetter } from '../../actions/coverLetter';
 import { HttpError } from 'wasp/server';
 
 // Mock dependencies
-jest.mock('wasp/server/fileUploads', () => ({
-  uploadFile: jest.fn().mockResolvedValue({ url: 'https://example.com/resume.pdf' })
+vi.mock('wasp/server/fileUploads', () => ({
+  uploadFile: vi.fn().mockResolvedValue({ url: 'https://example.com/resume.pdf' })
 }));
 
-jest.mock('../../utils/resumeParser', () => ({
-  parseResumeContent: jest.fn().mockResolvedValue('Parsed resume content')
+vi.mock('../../utils/resumeParser', () => ({
+  parseResumeContent: vi.fn().mockResolvedValue('Parsed resume content')
 }));
 
-jest.mock('openai', () => {
-  return jest.fn().mockImplementation(() => ({
+vi.mock('openai', () => {
+  return vi.fn().mockImplementation(() => ({
     chat: {
       completions: {
-        create: jest.fn().mockResolvedValue({
+        create: vi.fn().mockResolvedValue({
           choices: [
             {
               message: {
@@ -40,8 +40,8 @@ jest.mock('openai', () => {
 });
 
 // Mock axios
-jest.mock('axios', () => ({
-  get: jest.fn().mockResolvedValue({
+vi.mock('axios', () => ({
+  get: vi.fn().mockResolvedValue({
     data: {
       jobs: [
         {
@@ -81,11 +81,11 @@ const mockContext: any = {
   user: { id: 'user-123' },
   entities: {
     User: {
-      findUnique: jest.fn((args) => {
+      findUnique: vi.fn((args) => {
         const user = testDb.users.find(u => u.id === args.where.id);
         return Promise.resolve(user || null);
       }),
-      update: jest.fn((args) => {
+      update: vi.fn((args) => {
         const userIndex = testDb.users.findIndex(u => u.id === args.where.id);
         if (userIndex === -1) return Promise.resolve(null);
         
@@ -99,7 +99,7 @@ const mockContext: any = {
       })
     },
     Resume: {
-      create: jest.fn((args) => {
+      create: vi.fn((args) => {
         const newResume = {
           id: `resume-${testDb.resumes.length + 1}`,
           ...args.data,
@@ -111,13 +111,13 @@ const mockContext: any = {
         testDb.resumes.push(newResume);
         return Promise.resolve(newResume);
       }),
-      findUnique: jest.fn((args) => {
+      findUnique: vi.fn((args) => {
         const resume = testDb.resumes.find(r => r.id === args.where.id);
         return Promise.resolve(resume || null);
       })
     },
     Job: {
-      findFirst: jest.fn((args) => {
+      findFirst: vi.fn((args) => {
         const job = testDb.jobs.find(j => 
           j.title === args.where.title && 
           j.company === args.where.company && 
@@ -125,11 +125,11 @@ const mockContext: any = {
         );
         return Promise.resolve(job || null);
       }),
-      findUnique: jest.fn((args) => {
+      findUnique: vi.fn((args) => {
         const job = testDb.jobs.find(j => j.id === args.where.id);
         return Promise.resolve(job || null);
       }),
-      create: jest.fn((args) => {
+      create: vi.fn((args) => {
         const newJob = {
           id: `job-${testDb.jobs.length + 1}`,
           ...args.data,
@@ -141,7 +141,7 @@ const mockContext: any = {
       })
     },
     CoverLetter: {
-      create: jest.fn((args) => {
+      create: vi.fn((args) => {
         const newCoverLetter = {
           id: `cover-letter-${testDb.coverLetters.length + 1}`,
           ...args.data,
@@ -153,20 +153,20 @@ const mockContext: any = {
         testDb.coverLetters.push(newCoverLetter);
         return Promise.resolve(newCoverLetter);
       }),
-      findUnique: jest.fn((args) => {
+      findUnique: vi.fn((args) => {
         const coverLetter = testDb.coverLetters.find(c => c.id === args.where.id);
         return Promise.resolve(coverLetter || null);
       })
     },
     JobApplication: {
-      findFirst: jest.fn((args) => {
+      findFirst: vi.fn((args) => {
         const application = testDb.jobApplications.find(a => 
           a.userId === args.where.userId && 
           a.jobId === args.where.jobId
         );
         return Promise.resolve(application || null);
       }),
-      create: jest.fn((args) => {
+      create: vi.fn((args) => {
         const newApplication = {
           id: `application-${testDb.jobApplications.length + 1}`,
           userId: args.data.user?.connect?.id || mockContext.user.id,
@@ -199,7 +199,7 @@ describe('Job Application Flow Integration Test', () => {
     testDb.jobApplications = [];
     
     // Reset all mocks
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     
     // Set environment variables
     process.env.GOOGLE_JOBS_API_KEY = 'test-google-jobs-api-key';

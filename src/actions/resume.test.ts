@@ -1,21 +1,21 @@
-import { describe, it, expect, beforeEach, jest } from '@jest/globals';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { uploadResume, analyzeResume, changeResumeFormat } from './resume';
 import { HttpError } from 'wasp/server';
 
 // Mock dependencies
-jest.mock('wasp/server/fileUploads', () => ({
-  uploadFile: jest.fn().mockResolvedValue({ url: 'https://example.com/resume.pdf' })
+vi.mock('wasp/server/fileUploads', () => ({
+  uploadFile: vi.fn().mockResolvedValue({ url: 'https://example.com/resume.pdf' })
 }));
 
-jest.mock('../utils/resumeParser', () => ({
-  parseResumeContent: jest.fn().mockResolvedValue('Parsed resume content')
+vi.mock('../utils/resumeParser', () => ({
+  parseResumeContent: vi.fn().mockResolvedValue('Parsed resume content')
 }));
 
-jest.mock('openai', () => {
-  return jest.fn().mockImplementation(() => ({
+vi.mock('openai', () => {
+  return vi.fn().mockImplementation(() => ({
     chat: {
       completions: {
-        create: jest.fn().mockResolvedValue({
+        create: vi.fn().mockResolvedValue({
           choices: [
             {
               message: {
@@ -51,30 +51,30 @@ const mockContext = {
   user: { id: 'user-123' },
   entities: {
     Resume: {
-      create: jest.fn().mockImplementation((data) => ({ id: 'resume-123', ...data.data })),
-      findUnique: jest.fn().mockImplementation(() => ({
+      create: vi.fn().mockImplementation((data) => ({ id: 'resume-123', ...data.data })),
+      findUnique: vi.fn().mockImplementation(() => ({
         id: 'resume-123',
         userId: 'user-123',
         title: 'My Resume',
         content: 'Resume content',
         version: 1
       })),
-      update: jest.fn().mockImplementation((data) => ({ id: data.where.id, ...data.data }))
+      update: vi.fn().mockImplementation((data) => ({ id: data.where.id, ...data.data }))
     },
     User: {
-      findUnique: jest.fn().mockImplementation(() => ({
+      findUnique: vi.fn().mockImplementation(() => ({
         id: 'user-123',
         credits: 10,
         subscriptionStatus: 'active'
       })),
-      update: jest.fn().mockImplementation((data) => ({ id: data.where.id, ...data.data }))
+      update: vi.fn().mockImplementation((data) => ({ id: data.where.id, ...data.data }))
     }
   }
 };
 
 describe('Resume Actions', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   describe('uploadResume', () => {
