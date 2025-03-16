@@ -31,6 +31,7 @@ This script initializes the database schema using Prisma. It:
 
 1. Uses the schema.prisma file to create the initial database schema
 2. Creates all the tables needed for the application
+3. Uses the --create-only flag to skip shadow database creation (which requires CREATE DATABASE permission)
 
 Usage:
 ```
@@ -38,6 +39,36 @@ node scripts/init-database.js
 ```
 
 This script should be run before run-migration.js to ensure that all the required tables exist in the database.
+
+### init-database-sql.js
+
+This script initializes the database schema using direct SQL. It:
+
+1. Uses the create-tables.sql file to create all tables directly
+2. Bypasses Prisma's shadow database requirement
+3. Provides two methods: using the pg client or the psql command
+
+Usage:
+```
+node scripts/init-database-sql.js
+```
+
+This is an alternative to init-database.js when the database user doesn't have CREATE DATABASE permissions.
+
+### create-tables.sql
+
+This SQL script creates all tables for the MaxJobOffers application. It:
+
+1. Creates all the tables with proper relationships
+2. Sets up indexes and constraints
+3. Uses IF NOT EXISTS to avoid errors if tables already exist
+
+Usage:
+```
+psql [DATABASE_URL] -f scripts/create-tables.sql
+```
+
+This can be used directly with psql or through the init-database-sql.js script.
 
 ### run-migration.js
 

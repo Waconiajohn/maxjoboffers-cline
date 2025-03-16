@@ -32,8 +32,18 @@ async function runPrismaMigration() {
   
   return new Promise((resolve, reject) => {
     // Use Prisma migrate to create the initial schema
+    // Using --create-only to skip the shadow database creation (which requires CREATE DATABASE permission)
     const migrationName = 'initial_schema';
-    const prismaCommand = spawn('npx', ['prisma', 'migrate', 'dev', '--name', migrationName, '--schema', schemaPath], { 
+    const prismaCommand = spawn('npx', [
+      'prisma', 
+      'migrate', 
+      'dev', 
+      '--name', 
+      migrationName, 
+      '--schema', 
+      schemaPath,
+      '--create-only' // Skip shadow database creation
+    ], { 
       stdio: 'inherit',
       shell: true
     });
