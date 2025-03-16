@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MaxJobOffers Demo</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        header {
+            background-color: #2c3e50;
+            color: white;
+            padding: 20px 0;
+            text-align: center;
+        }
+        .features {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            margin-top: 30px;
+        }
+        .feature {
+            background-color: white;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            padding: 20px;
+            margin-bottom: 20px;
+            width: calc(33.333% - 20px);
+            cursor: pointer;
+            transition: transform 0.3s ease;
+        }
+        .feature:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        .feature h3 {
+            color: #2c3e50;
+        }
+        .cta {
+            background-color: #3498db;
+            color: white;
+            text-align: center;
+            padding: 40px 0;
+            margin-top: 30px;
+        }
+        .button {
+            display: inline-block;
+            background-color: #2ecc71;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 5px;
+            text-decoration: none;
+            font-weight: bold;
+            margin-top: 15px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+        .button:hover {
+            background-color: #27ae60;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.7);
+            z-index: 100;
+        }
+        .modal-content {
+            background-color: white;
+            margin: 10% auto;
+            padding: 20px;
+            width: 70%;
+            max-width: 700px;
+            border-radius: 5px;
+            position: relative;
+        }
+        .close {
+            position: absolute;
+            top: 10px;
+            right: 20px;
+            font-size: 28px;
+            cursor: pointer;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input, textarea, select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .resume-preview {
+            background-color: #f9f9f9;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin-top: 20px;
+        }
+        .loading {
+            display: none;
+            text-align: center;
+            margin: 20px 0;
+        }
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 2s linear infinite;
+            margin: 0 auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        @media (max-width: 768px) {
+            .feature {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1>MaxJobOffers</h1>
+            <p>AI-Powered Job Search & Application Platform</p>
+        </div>
+    </header>
+
+    <div class="container">
+        <section>
+            <h2>About MaxJobOffers</h2>
+            <p>MaxJobOffers is a comprehensive job search and application platform that leverages AI to help users find jobs, optimize their resumes, create cover letters, prepare for interviews, and more.</p>
+        </section>
+
+        <section class="features">
+            <div class="feature" id="job-search-feature">
+                <h3>Job Search</h3>
+                <p>Search for jobs using the Google Jobs API with advanced filtering options.</p>
+            </div>
+            <div class="feature" id="resume-feature">
+                <h3>Resume Management</h3>
+                <p>Upload, analyze, and optimize resumes for specific job descriptions using AI.</p>
+            </div>
+            <div class="feature" id="cover-letter-feature">
+                <h3>Cover Letter Generation</h3>
+                <p>Create tailored cover letters using AI based on your resume and job description.</p>
+            </div>
+            <div class="feature" id="interview-feature">
+                <h3>Interview Preparation</h3>
+                <p>Mock interviews with AI feedback and recording capabilities.</p>
+            </div>
+            <div class="feature" id="linkedin-feature">
+                <h3>LinkedIn Profile Optimization</h3>
+                <p>Generate and optimize LinkedIn profiles to attract recruiters.</p>
+            </div>
+            <div class="feature" id="company-feature">
+                <h3>Company Research</h3>
+                <p>AI-powered company research for interview preparation.</p>
+            </div>
+        </section>
+
+        <section class="cta">
+            <h2>Ready to Supercharge Your Job Search?</h2>
+            <p>Join MaxJobOffers today and increase your chances of landing your dream job.</p>
+            <a href="#" class="button" id="signup-button">Sign Up Now</a>
+        </section>
+    </div>
+
+    <!-- Resume Modal -->
+    <div id="resume-modal" class="modal">
+        <div class="modal-content">
+            <span class="close" id="resume-close">&times;</span>
+            <h2>Resume Optimization</h2>
+            <p>Upload your resume and a job description to get AI-powered suggestions to optimize your resume for the specific job.</p>
+            
+            <div class="form-group">
+                <label for="resume-text">Paste your resume text:</label>
+                <textarea id="resume-text" rows="8" placeholder="Paste your resume here..."></textarea>
+            </div>
+            
+            <div class="form-group">
+                <label for="job-description">Paste job description:</label>
+                <textarea id="job-description" rows="8" placeholder="Paste the job description here..."></textarea>
+            </div>
+            
+            <button class="button" id="optimize-button">Optimize Resume</button>
+            
+            <div class="loading" id="resume-loading">
+                <div class="spinner"></div>
+                <p>Analyzing and optimizing your resume...</p>
+            </div>
+            
+            <div class="resume-preview" id="optimized-resume" style="display: none;">
+                <h3>Optimized Resume</h3>
+                <div id="optimized-resume-content"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Signup Modal -->
+    <div id="signup-modal" class="modal">
+        <div class="modal-content">
+            <span class="close" id="signup-close">&times;</span>
+            <h2>Sign Up for MaxJobOffers</h2>
+            <p>Create your account to access all features of MaxJobOffers.</p>
+            
+            <div class="form-group">
+                <label for="name">Full Name:</label>
+                <input type="text" id="name" placeholder="Enter your full name">
+            </div>
+            
+            <div class="form-group">
+                <label for="email">Email Address:</label>
+                <input type="email" id="email" placeholder="Enter your email address">
+            </div>
+            
+            <div class="form-group">
+                <label for="password">Password:</label>
+                <input type="password" id="password" placeholder="Create a password">
+            </div>
+            
+            <div class="form-group">
+                <label for="plan">Select Plan:</label>
+                <select id="plan">
+                    <option value="basic">Basic - $9.99/month</option>
+                    <option value="professional">Professional - $19.99/month</option>
+                    <option value="enterprise">Enterprise - $49.99/month</option>
+                </select>
+            </div>
+            
+            <button class="button" id="create-account-button">Create Account</button>
+        </div>
+    </div>
+
+    <script>
+        // Feature buttons
+        document.getElementById('job-search-feature').addEventListener('click', function() {
+            alert('The Job Search feature is coming soon!');
+        });
+        
+        document.getElementById('resume-feature').addEventListener('click', function() {
+            document.getElementById('resume-modal').style.display = 'block';
+        });
+        
+        document.getElementById('cover-letter-feature').addEventListener('click', function() {
+            alert('The Cover Letter Generation feature is coming soon!');
+        });
+        
+        document.getElementById('interview-feature').addEventListener('click', function() {
+            alert('The Interview Preparation feature is coming soon!');
+        });
+        
+        document.getElementById('linkedin-feature').addEventListener('click', function() {
+            alert('The LinkedIn Profile Optimization feature is coming soon!');
+        });
+        
+        document.getElementById('company-feature').addEventListener('click', function() {
+            alert('The Company Research feature is coming soon!');
+        });
+        
+        // Sign up button
+        document.getElementById('signup-button').addEventListener('click', function() {
+            document.getElementById('signup-modal').style.display = 'block';
+        });
+        
+        // Close buttons
+        document.getElementById('resume-close').addEventListener('click', function() {
+            document.getElementById('resume-modal').style.display = 'none';
+        });
+        
+        document.getElementById('signup-close').addEventListener('click', function() {
+            document.getElementById('signup-modal').style.display = 'none';
+        });
+        
+        // Optimize resume button
+        document.getElementById('optimize-button').addEventListener('click', function() {
+            const resumeText = document.getElementById('resume-text').value;
+            const jobDescription = document.getElementById('job-description').value;
+            
+            if (!resumeText || !jobDescription) {
+                alert('Please enter both your resume and the job description.');
+                return;
+            }
+            
+            // Show loading spinner
+            document.getElementById('resume-loading').style.display = 'block';
+            
+            // Simulate AI processing
+            setTimeout(() => {
+                document.getElementById('resume-loading').style.display = 'none';
+                document.getElementById('optimized-resume').style.display = 'block';
+                
+                // Generate optimized resume (this would normally be done by AI)
+                const optimizedResume = generateOptimizedResume(resumeText, jobDescription);
+                document.getElementById('optimized-resume-content').innerHTML = optimizedResume;
+            }, 3000);
+        });
+        
+        // Create account button
+        document.getElementById('create-account-button').addEventListener('click', function() {
+            const name = document.getElementById('name').value;
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const plan = document.getElementById('plan').value;
+            
+            if (!name || !email || !password) {
+                alert('Please fill in all required fields.');
+                return;
+            }
+            
+            alert(`Thank you for signing up, ${name}! You have selected the ${plan} plan. In a real application, you would now be redirected to payment processing.`);
+            document.getElementById('signup-modal').style.display = 'none';
+        });
+        
+        function generateOptimizedResume(resume, jobDescription) {
+            // This is a simplified simulation of what an AI would do
+            // In a real application, this would call an API to process the resume
+            
+            // Extract keywords from job description
+            const keywords = extractKeywords(jobDescription);
+            
+            // Highlight matching keywords in resume
+            let optimizedResume = resume;
+            keywords.forEach(keyword => {
+                const regex = new RegExp(`\\b${keyword}\\b`, 'gi');
+                optimizedResume = optimizedResume.replace(regex, `<strong style="color: #27ae60;">${keyword}</strong>`);
+            });
+            
+            // Add suggestions
+            const suggestions = [
+                'Add more quantifiable achievements',
+                'Include relevant certifications',
+                'Highlight leadership experience',
+                'Emphasize teamwork and collaboration skills'
+            ];
+            
+            let suggestionsHTML = '<h4>Suggestions for Improvement:</h4><ul>';
+            suggestions.forEach(suggestion => {
+                suggestionsHTML += `<li>${suggestion}</li>`;
+            });
+            suggestionsHTML += '</ul>';
+            
+            return `<div>${optimizedResume}</div><hr>${suggestionsHTML}`;
+        }
+        
+        function extractKeywords(jobDescription) {
+            // Simplified keyword extraction
+            const commonKeywords = [
+                'experience', 'skills', 'team', 'leadership', 'project', 
+                'management', 'development', 'analysis', 'communication',
+                'degree', 'bachelor', 'master', 'certification', 'proficient',
+                'expert', 'knowledge', 'responsible', 'collaborate', 'implement'
+            ];
+            
+            // Return keywords that appear in the job description
+            return commonKeywords.filter(keyword => 
+                jobDescription.toLowerCase().includes(keyword.toLowerCase())
+            );
+        }
+    </script>
+</body>
+</html>

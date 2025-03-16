@@ -1,0 +1,50 @@
+{
+  "name": "maxjoboffers",
+  "version": "1.0.0",
+  "description": "AI-Powered Job Search & Application Platform",
+  "main": "index.js",
+  "scripts": {
+    "start": "wasp start",
+    "build": "wasp build",
+    "deploy": "wasp deploy",
+    "test": "vitest run",
+    "test:e2e": "cypress run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "lint": "eslint .",
+    "format": "prettier --write ."
+  },
+  "dependencies": {
+    "@emotion/react": "^11.11.0",
+    "@emotion/styled": "^11.11.0",
+    "@mui/icons-material": "^5.11.16",
+    "@mui/material": "^5.13.0",
+    "axios": "^1.4.0",
+    "date-fns": "^2.30.0",
+    "openai": "^4.0.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-router-dom": "^6.11.1"
+  },
+  "devDependencies": {
+    "@testing-library/jest-dom": "^5.16.5",
+    "@testing-library/react": "^14.0.0",
+    "@testing-library/user-event": "^14.4.3",
+    "@types/jest": "^29.5.1",
+    "@types/node": "^20.1.3",
+    "@types/react": "^18.2.6",
+    "@types/react-dom": "^18.2.4",
+    "@vitejs/plugin-react": "^4.0.0",
+    "@vitest/coverage-v8": "^1.0.0",
+    "cypress": "^12.12.0",
+    "eslint": "^8.40.0",
+    "eslint-config-prettier": "^8.8.0",
+    "eslint-plugin-react": "^7.32.2",
+    "jsdom": "^22.0.0",
+    "prettier": "^2.8.8",
+    "typescript": "^5.0.4",
+    "vitest": "^1.0.0"
+  },
+  "author": "",
+  "license": "ISC"
+}

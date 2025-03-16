@@ -1,0 +1,34 @@
+{
+  "testUser": {
+    "email": "test@example.com",
+    "password": "Password123!",
+    "username": "testuser",
+    "firstName": "Test",
+    "lastName": "User"
+  },
+  "adminUser": {
+    "email": "admin@example.com",
+    "password": "AdminPassword123!",
+    "username": "adminuser",
+    "firstName": "Admin",
+    "lastName": "User",
+    "isAdmin": true
+  },
+  "premiumUser": {
+    "email": "premium@example.com",
+    "password": "PremiumPassword123!",
+    "username": "premiumuser",
+    "firstName": "Premium",
+    "lastName": "User",
+    "subscriptionStatus": "active",
+    "subscriptionPlanId": "premium_monthly"
+  },
+  "freeUser": {
+    "email": "free@example.com",
+    "password": "FreePassword123!",
+    "username": "freeuser",
+    "firstName": "Free",
+    "lastName": "User",
+    "credits": 3
+  }
+}

@@ -1,337 +1,197 @@
-# MaxJobOffers Implementation Plan
+# MaxJobOffers - AI-Powered Job Search & Application Platform
 
-This document outlines the comprehensive implementation plan for the MaxJobOffers application, a job search platform with advanced AI features.
+MaxJobOffers is a comprehensive job search and application platform that leverages AI to help users find jobs, optimize their resumes, create cover letters, prepare for interviews, and more.
 
-## Table of Contents
+## Features
 
-1. [Project Overview](#project-overview)
-2. [Technology Stack](#technology-stack)
-3. [Implementation Plan](#implementation-plan)
-   - [Project Setup and Foundation](#1-project-setup-and-foundation)
-   - [Resume Management System](#2-resume-management-system)
-   - [Job Search and Application](#3-job-search-and-application)
-   - [Cover Letter Generation](#4-cover-letter-generation)
-   - [Interview Preparation System](#5-interview-preparation-system)
-   - [LinkedIn Tools](#6-linkedin-tools)
-   - [Financial Planning Section](#7-financial-planning-section)
-   - [User Management and Authentication](#8-user-management-and-authentication)
-   - [Testing Implementation](#9-testing-implementation)
-   - [Deployment Configuration](#10-deployment-configuration)
-   - [Project Management](#11-project-management)
-4. [Implementation Timeline](#implementation-timeline)
-5. [Conclusion](#conclusion)
+- **Job Search**: Search for jobs using the Google Jobs API
+- **Resume Management**: Upload, analyze, and optimize resumes for specific job descriptions
+- **Cover Letter Generation**: Create tailored cover letters using AI
+- **Interview Preparation**: Mock interviews with AI feedback and recording capabilities
+- **LinkedIn Profile Optimization**: Generate and optimize LinkedIn profiles
+- **Financial Planning**: Salary negotiation strategies and career growth planning
+- **Company Research**: AI-powered company research for interview preparation
+- **Subscription Plans**: Various subscription plans and credit-based payment options
 
-## Project Overview
+## Tech Stack
 
-MaxJobOffers is a comprehensive job search application with advanced features for job seekers, particularly focused on executive-level positions. The application includes:
+- **Frontend**: React, TypeScript, TailwindCSS
+- **Backend**: Node.js, Wasp Framework
+- **Database**: PostgreSQL
+- **AI**: OpenAI GPT-4 API
+- **File Storage**: AWS S3
+- **Payments**: Stripe
+- **Authentication**: JWT, OAuth (Google, LinkedIn)
+- **Containerization**: Docker
+- **Deployment**: AWS
 
-- Integration with Google job board API
-- Resume upload and AI-powered optimization
-- Cover letter generation using AI
-- Interview preparation with video recording and AI feedback
-- LinkedIn profile optimization and content creation
-- Financial planning tools
-- Subscription-based access to premium features
+## Prerequisites
 
-## Technology Stack
+- Node.js (v18+)
+- Docker and Docker Compose
+- Wasp CLI
+- PostgreSQL (or use the Docker container)
+- AWS Account (for S3 file storage)
+- Stripe Account (for payments)
+- OpenAI API Key
+- Google Jobs API Key
 
-### Frontend
-- Next.js/React with TypeScript
-- Material UI component library
-- State management with Zustand
-- Data fetching with React Query
-- Testing with Jest and React Testing Library
+## Environment Variables
 
-### Backend
-- Express.js with TypeScript
-- Prisma ORM for database access
-- OpenAI integration for AI features
-- AWS S3 for file storage
-- Stripe for payment processing
+Create a `.env` file in the root directory with the following variables:
 
-## Implementation Plan
+```
+# Database
+DATABASE_URL=postgresql://postgres:postgres@db:5432/maxjoboffers
 
-### 1. Project Setup and Foundation
+# Authentication
+JWT_SECRET=your-jwt-secret
+SESSION_SECRET=your-session-secret
 
-#### Initial Setup
-- Create a new project using the Open SaaS template
-  ```bash
-  curl -sSL https://get.wasp-lang.dev/installer.sh | sh
-  wasp new job-search-app --template=https://github.com/wasp-lang/open-saas
-  cd job-search-app
-  ```
-- Configure environment variables for:
-  - OpenAI API key
-  - AWS S3 credentials
-  - Email service (SendGrid/Mailgun)
-  - Payment processor (Stripe/Lemon Squeezy)
+# OpenAI
+OPENAI_API_KEY=your-openai-api-key
 
-#### Data Model Extension
-- Extend the Prisma schema to include job search-specific entities:
-  ```prisma
-  model Resume {
-    id              String   @id @default(uuid())
-    user            User     @relation(fields: [userId], references: [id])
-    userId          String
-    title           String
-    content         String   @db.Text
-    version         Int      @default(1)
-    format          String?
-    isAtsOptimized  Boolean  @default(false)
-    createdAt       DateTime @default(now())
-    updatedAt       DateTime @updatedAt
-  }
+# AWS
+AWS_ACCESS_KEY_ID=your-aws-access-key-id
+AWS_SECRET_ACCESS_KEY=your-aws-secret-access-key
+AWS_REGION=your-aws-region
+AWS_S3_BUCKET=your-aws-s3-bucket
 
-  model Job {
-    id              String   @id @default(uuid())
-    title           String
-    company         String
-    location        String?
-    description     String   @db.Text
-    requirements    String?  @db.Text
-    salary          Json?
-    applicationUrl  String?
-    source          String?
-    createdAt       DateTime @default(now())
-    updatedAt       DateTime @updatedAt
-    applications    JobApplication[]
-  }
+# Stripe
+STRIPE_SECRET_KEY=your-stripe-secret-key
+STRIPE_WEBHOOK_SECRET=your-stripe-webhook-secret
+STRIPE_PUBLISHABLE_KEY=your-stripe-publishable-key
 
-  model JobApplication {
-    id              String   @id @default(uuid())
-    user            User     @relation(fields: [userId], references: [id])
-    userId          String
-    job             Job      @relation(fields: [jobId], references: [id])
-    jobId           String
-    resume          Resume?  @relation(fields: [resumeId], references: [id])
-    resumeId        String?
-    coverLetter     CoverLetter? @relation(fields: [coverLetterId], references: [id])
-    coverLetterId   String?
-    status          String   @default("applied")
-    createdAt       DateTime @default(now())
-    updatedAt       DateTime @updatedAt
-  }
+# SendGrid
+SENDGRID_API_KEY=your-sendgrid-api-key
 
-  model CoverLetter {
-    id              String   @id @default(uuid())
-    user            User     @relation(fields: [userId], references: [id])
-    userId          String
-    title           String
-    content         String   @db.Text
-    createdAt       DateTime @default(now())
-    updatedAt       DateTime @updatedAt
-    applications    JobApplication[]
-  }
+# Google
+GOOGLE_CLIENT_ID=your-google-client-id
+GOOGLE_CLIENT_SECRET=your-google-client-secret
+GOOGLE_JOBS_API_KEY=your-google-jobs-api-key
 
-  model Interview {
-    id              String   @id @default(uuid())
-    user            User     @relation(fields: [userId], references: [id])
-    userId          String
-    jobApplication  JobApplication @relation(fields: [jobApplicationId], references: [id])
-    jobApplicationId String
-    date            DateTime?
-    notes           String?  @db.Text
-    questions       InterviewQuestion[]
-    recordings      InterviewRecording[]
-    createdAt       DateTime @default(now())
-    updatedAt       DateTime @updatedAt
-  }
+# LinkedIn
+LINKEDIN_CLIENT_ID=your-linkedin-client-id
+LINKEDIN_CLIENT_SECRET=your-linkedin-client-secret
 
-  // Extend the User model with job search specific fields
-  model User {
-    // Existing fields from Open SaaS...
-    resumes         Resume[]
-    applications    JobApplication[]
-    interviews      Interview[]
-    linkedInProfile LinkedInProfile?
-  }
-  ```
+# Payment Plans
+PAYMENTS_BASIC_SUBSCRIPTION_PLAN_ID=your-basic-subscription-plan-id
+PAYMENTS_PROFESSIONAL_SUBSCRIPTION_PLAN_ID=your-professional-subscription-plan-id
+PAYMENTS_ENTERPRISE_SUBSCRIPTION_PLAN_ID=your-enterprise-subscription-plan-id
+PAYMENTS_CREDITS_10_PLAN_ID=your-credits-10-plan-id
+PAYMENTS_CREDITS_50_PLAN_ID=your-credits-50-plan-id
+PAYMENTS_CREDITS_100_PLAN_ID=your-credits-100-plan-id
+```
 
-#### Update Payment Plans
-- Modify the payment plans to match our subscription tiers:
-  ```typescript
-  // src/payment/plans.ts
-  export enum PaymentPlanId {
-    Basic = 'basic',
-    Professional = 'professional',
-    Enterprise = 'enterprise',
-    Credits10 = 'credits10',
-    Credits50 = 'credits50',
-    Credits100 = 'credits100',
-  }
+## Installation
 
-  export const paymentPlans: Record<PaymentPlanId, PaymentPlan> = {
-    [PaymentPlanId.Basic]: {
-      getPaymentProcessorPlanId: () => requireNodeEnvVar('PAYMENTS_BASIC_SUBSCRIPTION_PLAN_ID'),
-      effect: { kind: 'subscription' }
-    },
-    [PaymentPlanId.Professional]: {
-      getPaymentProcessorPlanId: () => requireNodeEnvVar('PAYMENTS_PROFESSIONAL_SUBSCRIPTION_PLAN_ID'),
-      effect: { kind: 'subscription' }
-    },
-    [PaymentPlanId.Enterprise]: {
-      getPaymentProcessorPlanId: () => requireNodeEnvVar('PAYMENTS_ENTERPRISE_SUBSCRIPTION_PLAN_ID'),
-      effect: { kind: 'subscription' }
-    },
-    // Add credit plans...
-  };
-  ```
+### Using Docker (Recommended)
 
-### 2. Resume Management System
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/yourusername/maxjoboffers.git
+   cd maxjoboffers
+   ```
 
-#### Resume Upload and Storage
-- Implement file upload using AWS S3 integration
-- Parse resume content using AI
-- Store resume versions in the database
+2. Create a `.env` file with the required environment variables (see above).
 
-#### Resume AI Analysis and Optimization
-- Implement OpenAI integration for resume analysis
-- Compare resume against job descriptions
-- Generate improvement suggestions
-- Optimize for ATS compatibility
+3. Build and start the Docker containers:
+   ```bash
+   docker-compose up -d
+   ```
 
-#### Resume Format Selection
-- Implement multiple resume format options
-- Convert between formats
-- Export to PDF, DOCX, and plain text
+4. The application will be available at:
+   - Frontend: http://localhost:3000
+   - Backend: http://localhost:3001
+   - pgAdmin: http://localhost:5050 (email: admin@maxjoboffers.com, password: admin)
 
-### 3. Job Search and Application
+### Manual Installation
 
-#### Google Job Board API Integration
-- Implement job search using Google Jobs API
-- Store job search results
-- Implement advanced filtering options
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/yourusername/maxjoboffers.git
+   cd maxjoboffers
+   ```
 
-#### Job Application Tracking
-- Track application status
-- Store application history
-- Provide application analytics
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
 
-### 4. Cover Letter Generation
+3. Create a `.env` file with the required environment variables (see above).
 
-#### AI-Powered Cover Letter Creation
-- Implement OpenAI integration for cover letter generation
-- Customize based on resume and job description
-- Provide multiple style options
+4. Start the development server:
+   ```bash
+   wasp start
+   ```
 
-### 5. Interview Preparation System
+5. The application will be available at:
+   - Frontend: http://localhost:3000
+   - Backend: http://localhost:3001
 
-#### Mock Interview with Video Recording
-- Implement video recording functionality
-- Generate interview questions based on job description
-- Provide AI feedback on answers
+## Development
 
-#### Company Research
-- Implement company research functionality
-- Analyze company culture, financials, and strategy
-- Provide competitor analysis
+### Project Structure
 
-### 6. LinkedIn Tools
+- `main.wasp`: Wasp configuration file
+- `src/`: Source code
+  - `actions/`: Server-side actions
+  - `queries/`: Server-side queries
+  - `pages/`: React pages
+  - `components/`: React components
+  - `utils/`: Utility functions
+  - `payment/`: Payment-related code
+  - `auth/`: Authentication-related code
+  - `__mocks__/`: Mock files for testing
 
-#### LinkedIn Profile Editor
-- Implement LinkedIn profile generation based on resume
-- Optimize profile for visibility
-- Suggest improvements
+### Running Tests
 
-#### LinkedIn Content Creator
-- Generate blog post ideas
-- Create content calendar
-- Optimize posts for engagement
+```bash
+npm test
+```
 
-### 7. Financial Planning Section
+### Building for Production
 
-#### Financial Planning Tools
-- Implement financial goal setting
-- Create budget planning tools
-- Provide salary negotiation guidance
+```bash
+wasp build
+```
 
-### 8. User Management and Authentication
+The built application will be in the `.wasp/build` directory.
 
-#### Authentication System
-- Implement secure authentication
-- Add social login options
-- Implement password reset and email verification
+## Deployment
 
-#### User Profile Management
-- Create comprehensive user profiles
-- Implement privacy settings
-- Add data export functionality
+### AWS Deployment
 
-### 9. Testing Implementation
+1. Build the Docker image:
+   ```bash
+   docker build -t maxjoboffers .
+   ```
 
-#### Unit Testing
-- Implement unit tests for all services and operations
-- Mock external dependencies
-- Achieve high test coverage
+2. Push the image to Amazon ECR:
+   ```bash
+   aws ecr get-login-password --region your-region | docker login --username AWS --password-stdin your-account-id.dkr.ecr.your-region.amazonaws.com
+   docker tag maxjoboffers:latest your-account-id.dkr.ecr.your-region.amazonaws.com/maxjoboffers:latest
+   docker push your-account-id.dkr.ecr.your-region.amazonaws.com/maxjoboffers:latest
+   ```
 
-#### Integration Testing
-- Test API endpoints
-- Test database interactions
-- Test external service integrations
+3. Deploy using AWS ECS or Elastic Beanstalk.
 
-#### End-to-End Testing
-- Implement E2E tests with Playwright
-- Test critical user flows
-- Test responsive design
+## Contributing
 
-### 10. Deployment Configuration
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add some amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
-#### Docker Setup
-- Create Docker Compose configuration
-- Implement multi-stage builds
-- Configure container orchestration
+## License
 
-#### AWS Integration
-- Configure S3 for file storage
-- Set up CloudFront for content delivery
-- Implement Lambda functions for serverless operations
+This project is licensed under the MIT License - see the LICENSE file for details.
 
-#### Environment Configuration
-- Create environment variable templates
-- Configure different environments (dev, staging, prod)
-- Implement secrets management
+## Acknowledgements
 
-### 11. Project Management
-
-#### Development Workflow
-- Set up feature branches
-- Implement pull request reviews
-- Configure CI/CD pipeline
-
-#### Documentation
-- Create comprehensive README
-- Document API endpoints
-- Document frontend components
-
-#### Monitoring and Analytics
-- Implement error tracking
-- Set up performance monitoring
-- Create analytics dashboard
-
-## Implementation Timeline
-
-### Phase 1: Core Functionality (Weeks 1-4)
-- Week 1: Project setup and foundation
-- Week 2: Resume management system
-- Week 3: Job search and application
-- Week 4: Cover letter generation
-
-### Phase 2: Advanced Features (Weeks 5-8)
-- Week 5: Interview preparation system
-- Week 6: LinkedIn tools
-- Week 7: Financial planning section
-- Week 8: Testing implementation
-
-### Phase 3: Deployment and Refinement (Weeks 9-12)
-- Week 9: Deployment configuration
-- Week 10: Monitoring and analytics
-- Week 11: Documentation
-- Week 12: Final testing and launch
-
-## Conclusion
-
-This implementation plan provides a comprehensive roadmap for building the MaxJobOffers application. By leveraging the Open SaaS template and following this structured approach, we can efficiently build a robust application that meets all the requirements specified.
-
-The phased approach allows for incremental development and testing, ensuring that each component is properly implemented and integrated before moving on to the next. The comprehensive testing strategy will help ensure the reliability and quality of the application.
-
-With this plan in place, we are well-positioned to successfully implement the MaxJobOffers application and deliver a high-quality product that provides significant value to users in their job search journey.
+- [Wasp Framework](https://wasp-lang.dev/)
+- [OpenAI](https://openai.com/)
+- [Google Jobs API](https://developers.google.com/jobs)
+- [Stripe](https://stripe.com/)
+- [AWS](https://aws.amazon.com/)

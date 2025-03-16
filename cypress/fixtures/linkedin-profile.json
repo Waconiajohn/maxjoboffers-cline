@@ -1,0 +1,110 @@
+{
+  "headline": "Software Engineer with expertise in React, Node.js, and Cloud Technologies",
+  "summary": "Experienced software engineer with a passion for building scalable web applications. Over 5 years of experience in full-stack development with a focus on React, Node.js, and AWS. Strong problem-solving skills and a track record of delivering high-quality software on time.",
+  "sections": {
+    "experience": [
+      {
+        "title": "Senior Software Engineer",
+        "company": "Tech Innovations Inc.",
+        "location": "San Francisco, CA",
+        "startDate": "2022-01",
+        "endDate": null,
+        "description": "Led development of a microservices-based e-commerce platform, improving system reliability by 35%. Architected and implemented a real-time analytics dashboard using React, Redux, and WebSockets. Mentored junior developers and conducted code reviews, improving team productivity by 25%. Optimized database queries and implemented caching strategies, reducing API response times by 40%."
+      },
+      {
+        "title": "Software Engineer",
+        "company": "Digital Solutions LLC",
+        "location": "San Francisco, CA",
+        "startDate": "2019-03",
+        "endDate": "2021-12",
+        "description": "Developed and maintained RESTful APIs using Node.js and Express, serving 100K+ daily users. Built responsive web applications using React and Material UI, improving user engagement by 20%. Implemented automated testing with Jest and Cypress, increasing code coverage to 85%. Collaborated with UX/UI designers to implement pixel-perfect interfaces and improve user experience."
+      },
+      {
+        "title": "Junior Developer",
+        "company": "Startup Innovations",
+        "location": "San Jose, CA",
+        "startDate": "2017-06",
+        "endDate": "2019-02",
+        "description": "Contributed to frontend development using React and Redux for a SaaS product. Assisted in database design and implementation using MongoDB. Participated in agile development processes, including daily stand-ups and sprint planning."
+      }
+    ],
+    "education": [
+      {
+        "school": "University of California, Berkeley",
+        "degree": "Bachelor of Science in Computer Science",
+        "fieldOfStudy": "Computer Science",
+        "startDate": "2013-09",
+        "endDate": "2017-05",
+        "description": "GPA: 3.8/4.0. Relevant Coursework: Data Structures, Algorithms, Database Systems, Web Development."
+      }
+    ],
+    "skills": [
+      "JavaScript",
+      "TypeScript",
+      "React",
+      "Node.js",
+      "Express",
+      "MongoDB",
+      "PostgreSQL",
+      "AWS",
+      "Docker",
+      "Kubernetes",
+      "CI/CD",
+      "Git",
+      "REST APIs",
+      "GraphQL",
+      "Redux",
+      "HTML5",
+      "CSS3",
+      "SASS",
+      "Material UI",
+      "Jest",
+      "Cypress"
+    ],
+    "certifications": [
+      {
+        "name": "AWS Certified Solutions Architect",
+        "organization": "Amazon Web Services",
+        "issueDate": "2021-06",
+        "expirationDate": "2024-06"
+      },
+      {
+        "name": "MongoDB Certified Developer",
+        "organization": "MongoDB",
+        "issueDate": "2020-03",
+        "expirationDate": null
+      },
+      {
+        "name": "Google Cloud Professional Developer",
+        "organization": "Google",
+        "issueDate": "2022-01",
+        "expirationDate": "2025-01"
+      }
+    ],
+    "projects": [
+      {
+        "name": "Personal Finance Dashboard",
+        "description": "Built a full-stack application using React, Node.js, and PostgreSQL. Implemented data visualization with D3.js and real-time updates with WebSockets. Deployed using Docker and AWS, with CI/CD pipeline using GitHub Actions.",
+        "url": "https://github.com/johndoe/finance-dashboard"
+      },
+      {
+        "name": "Open Source Contribution",
+        "description": "Active contributor to several open-source projects on GitHub. Created and maintained a popular npm package with 10K+ weekly downloads. Presented at local meetups and conferences on modern web development techniques.",
+        "url": "https://github.com/johndoe/open-source-projects"
+      }
+    ]
+  },
+  "keywords": [
+    "software engineer",
+    "full stack developer",
+    "react",
+    "node.js",
+    "javascript",
+    "typescript",
+    "aws",
+    "cloud",
+    "microservices",
+    "web development"
+  ],
+  "optimizationScore": 75
+}
