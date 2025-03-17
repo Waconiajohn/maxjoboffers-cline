@@ -1,82 +1,81 @@
 # MaxJobOffers Scripts
 
-This directory contains utility scripts for the MaxJobOffers application.
+This directory contains scripts for managing the MaxJobOffers application.
 
 ## File Upload Scripts
 
 ### test-file-upload.js
 
-Tests the S3 file upload functionality using the AWS SDK. It creates a test file and uploads it to the S3 bucket.
+Tests file uploads to S3 using the AWS SDK.
 
 ```bash
 node scripts/test-file-upload.js
 ```
 
-## Deployment Scripts
+### update-ec2-test-file-upload.js
 
-### update-ec2.sh
-
-Updates the EC2 instance with the latest changes from GitHub, installs dependencies, and restarts the application.
+Updates the EC2 instance's test-file-upload.js script with the correct implementation.
 
 ```bash
-./scripts/update-ec2.sh
+node scripts/update-ec2-test-file-upload.js
 ```
 
-## Monitoring Scripts
+## EC2 Deployment Scripts
+
+### update-ec2-env.js
+
+Updates the EC2 instance's .env file with the correct configuration.
+
+```bash
+node scripts/update-ec2-env.js
+```
+
+### install-ec2-dependencies.js
+
+Installs the required dependencies on the EC2 instance.
+
+```bash
+node scripts/install-ec2-dependencies.js
+```
+
+## Monitoring and Backup Scripts
 
 ### setup-cloudwatch-monitoring.js
 
-Sets up CloudWatch monitoring for S3 operations. It creates CloudWatch alarms for S3 operations and configures notifications.
+Sets up CloudWatch monitoring for S3 operations.
 
 ```bash
 node scripts/setup-cloudwatch-monitoring.js
 ```
 
-## Backup Scripts
-
 ### setup-backup-procedures.js
 
-Sets up backup procedures for important files. It configures S3 lifecycle rules for backups and creates a backup script.
+Sets up backup procedures for important files.
 
 ```bash
 node scripts/setup-backup-procedures.js
 ```
 
-### run-backup.sh
+## S3 Uploader Utility
 
-Creates backups of important files and uploads them to S3. This script is automatically created by the setup-backup-procedures.js script.
+The S3 uploader utility is located in `src/utils/s3Uploader.ts`. It provides a simple interface for uploading files to S3.
 
-```bash
-./scripts/run-backup.sh
+Example usage:
+
+```typescript
+import { uploadFile } from '../utils/s3Uploader';
+
+// Upload a file to S3
+const result = await uploadFile({
+  file: fileObject,
+  key: 'path/to/file.ext',
+  contentType: 'application/octet-stream'
+});
+
+console.log('File uploaded successfully:', result.Location);
 ```
 
-## Database Scripts
-
-### init-database.js
-
-Initializes the database with the required tables and initial data.
-
-```bash
-node scripts/init-database.js
-```
-
-### run-migration.js
-
-Runs database migrations to update the database schema.
-
-```bash
-node scripts/run-migration.js
-```
-
-### verify-database.js
-
-Verifies the database connection and schema.
-
-```bash
-node scripts/verify-database.js
-```
-
-## GitHub Scripts
+## GitHub Integration
 
 ### update-github.sh
 
@@ -86,13 +85,12 @@ Updates the GitHub repository with the latest changes.
 ./scripts/update-github.sh
 ```
 
-## AWS Configuration
+## Database Scripts
 
-The scripts use the following environment variables for AWS configuration:
+### fix-migration.js
 
-- `AWS_REGION`: The AWS region (default: us-west-2)
-- `AWS_ACCESS_KEY_ID`: The AWS access key ID
-- `AWS_SECRET_ACCESS_KEY`: The AWS secret access key
-- `AWS_S3_BUCKET`: The S3 bucket name (default: executive-lms-backups-266735837284)
+Fixes migration issues in the database.
 
-These environment variables should be set in the .env file.
+```bash
+node scripts/fix-migration.js
+```

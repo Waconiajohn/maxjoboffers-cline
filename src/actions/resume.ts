@@ -1,230 +1,111 @@
-import { HttpError } from 'wasp/server';
-import { type UploadedFile } from 'wasp/server/fileUploads';
-import { uploadToS3 } from '../utils/s3Uploader';
-import { Resume, User } from 'wasp/entities';
-import { hasActiveSubscription } from '../payment/subscriptionUtils';
-import { parseResumeContent } from '../utils/resumeParser';
-import OpenAI from 'openai';
+import S3Uploader from '../utils/s3Uploader';
+import fs from 'fs';
+import path from 'path';
 
-// Initialize OpenAI
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-
-type UploadResumeInput = {
-  file: UploadedFile;
-  title: string;
-};
-
-export const uploadResume = async (
-  { file, title }: UploadResumeInput,
-  context: any
-) => {
-  if (!context.user) {
-    throw new HttpError(401, 'You must be logged in to upload a resume');
+/**
+ * Upload a resume file to S3
+ * @param filePath Path to the resume file
+ * @param userId User ID for organizing files
+ * @param onProgress Progress callback
+ * @returns Promise resolving to the URL of the uploaded file
+ */
+export async function uploadResume(
+  filePath: string,
+  userId: string,
+  onProgress?: (progress: { loaded?: number; total?: number }) => void
+): Promise<string> {
+  // Create S3 uploader instance from environment variables
+  const s3Uploader = S3Uploader.fromEnv();
+  
+  // Validate file exists
+  if (!fs.existsSync(filePath)) {
+    throw new Error(`Resume file not found: ${filePath}`);
   }
-
+  
+  // Validate file type
+  const allowedTypes = ['.pdf', '.doc', '.docx'];
+  if (!s3Uploader.validateFileType(filePath, allowedTypes)) {
+    throw new Error(`Invalid resume file type. Allowed types: ${allowedTypes.join(', ')}`);
+  }
+  
+  // Validate file size (10MB max)
+  const maxSizeBytes = 10 * 1024 * 1024;
+  if (!s3Uploader.validateFileSize(filePath, maxSizeBytes)) {
+    throw new Error(`Resume file too large. Maximum size: ${maxSizeBytes / (1024 * 1024)}MB`);
+  }
+  
+  // Generate S3 key
+  const fileName = path.basename(filePath);
+  const key = s3Uploader.generateKey(fileName, `resumes/${userId}/`);
+  
+  // Upload file to S3
   try {
-    // Upload file to S3 using our enhanced S3 uploader
-    const uploadResult = await uploadToS3({
-      file: file.content,
-      fileName: file.name,
-      contentType: file.type,
-      path: `resumes/${context.user.id}`
-    });
-
-    // Parse resume content
-    const content = await parseResumeContent(file);
-
-    // Create resume record
-    const resume = await context.entities.Resume.create({
-      data: {
-        title,
-        content,
-        fileUrl: uploadResult.url,
-        user: { connect: { id: context.user.id } }
-      }
-    });
-
-    return resume;
-  } catch (error: any) {
+    const url = await s3Uploader.uploadFile(filePath, key, undefined, onProgress);
+    return url;
+  } catch (error) {
     console.error('Error uploading resume:', error);
-    throw new HttpError(500, 'Failed to upload resume: ' + error.message);
+    throw new Error(`Failed to upload resume: ${(error as Error).message}`);
   }
-};
+}
 
-type AnalyzeResumeInput = {
-  resumeId: string;
-  jobDescription: string;
-};
-
-type ResumeAnalysis = {
-  matchScore: number;
-  strengths: string[];
-  weaknesses: string[];
-  improvementSuggestions: {
-    section: string;
-    suggestion: string;
-    reason: string;
-  }[];
-};
-
-export const analyzeResume = async (
-  { resumeId, jobDescription }: AnalyzeResumeInput,
-  context: any
-): Promise<ResumeAnalysis> => {
-  if (!context.user) {
-    throw new HttpError(401, 'You must be logged in to analyze a resume');
-  }
-
-  // Check user credits/subscription
-  const user = await context.entities.User.findUnique({
-    where: { id: context.user.id }
-  });
-
-  const hasCredits = user.credits > 0;
-  const hasSubscription = hasActiveSubscription(user);
-
-  if (!hasCredits && !hasSubscription) {
-    throw new HttpError(402, 'Insufficient credits or subscription');
-  }
-
+/**
+ * Upload a resume version to S3
+ * @param resumeContent Resume content as a string
+ * @param userId User ID for organizing files
+ * @param versionName Version name or identifier
+ * @returns Promise resolving to the URL of the uploaded file
+ */
+export async function uploadResumeVersion(
+  resumeContent: string,
+  userId: string,
+  versionName: string
+): Promise<string> {
+  // Create S3 uploader instance from environment variables
+  const s3Uploader = S3Uploader.fromEnv();
+  
+  // Convert content to buffer
+  const buffer = Buffer.from(resumeContent, 'utf-8');
+  
+  // Generate S3 key
+  const sanitizedVersionName = versionName.replace(/[^a-zA-Z0-9.-]/g, '_');
+  const key = `resumes/${userId}/versions/${Date.now()}-${sanitizedVersionName}.txt`;
+  
+  // Upload buffer to S3
   try {
-    // Get resume
-    const resume = await context.entities.Resume.findUnique({
-      where: { id: resumeId }
-    });
-
-    if (!resume) {
-      throw new HttpError(404, 'Resume not found');
-    }
-
-    // Check if resume belongs to user
-    if (resume.userId !== context.user.id) {
-      throw new HttpError(403, 'You do not have permission to analyze this resume');
-    }
-
-    // Use OpenAI for analysis
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4",
-      messages: [
-        {
-          role: "system",
-          content: "You are an expert resume reviewer with deep experience in executive hiring."
-        },
-        {
-          role: "user",
-          content: `Analyze this resume for a job with the following description: ${jobDescription}\n\nResume content: ${resume.content}`
-        }
-      ],
-      tools: [
-        {
-          type: "function",
-          function: {
-            name: "analyzeResume",
-            description: "Analyzes a resume against a job description",
-            parameters: {
-              type: "object",
-              properties: {
-                matchScore: {
-                  type: "number",
-                  description: "Score from 0-100 indicating how well the resume matches the job description"
-                },
-                strengths: {
-                  type: "array",
-                  items: { type: "string" },
-                  description: "List of resume strengths"
-                },
-                weaknesses: {
-                  type: "array",
-                  items: { type: "string" },
-                  description: "List of resume weaknesses"
-                },
-                improvementSuggestions: {
-                  type: "array",
-                  items: {
-                    type: "object",
-                    properties: {
-                      section: { type: "string" },
-                      suggestion: { type: "string" },
-                      reason: { type: "string" }
-                    }
-                  },
-                  description: "Specific suggestions for improvement"
-                }
-              },
-              required: ["matchScore", "strengths", "weaknesses", "improvementSuggestions"]
-            }
-          }
-        }
-      ],
-      tool_choice: {
-        type: "function",
-        function: { name: "analyzeResume" }
-      }
-    });
-
-    // Decrement user credits if not on subscription
-    if (!hasSubscription) {
-      await context.entities.User.update({
-        where: { id: context.user.id },
-        data: { credits: { decrement: 1 } }
-      });
-    }
-
-    const analysisArgs = completion.choices[0]?.message?.tool_calls?.[0]?.function.arguments;
-    if (!analysisArgs) {
-      throw new HttpError(500, 'Failed to analyze resume');
-    }
-
-    return JSON.parse(analysisArgs);
-  } catch (error: any) {
-    console.error('Error analyzing resume:', error);
-    throw new HttpError(500, 'Failed to analyze resume: ' + error.message);
+    const url = await s3Uploader.uploadBuffer(buffer, key, 'text/plain');
+    return url;
+  } catch (error) {
+    console.error('Error uploading resume version:', error);
+    throw new Error(`Failed to upload resume version: ${(error as Error).message}`);
   }
-};
+}
 
-type ChangeResumeFormatInput = {
-  resumeId: string;
-  format: string;
-};
-
-export const changeResumeFormat = async (
-  { resumeId, format }: ChangeResumeFormatInput,
-  context: any
-) => {
-  if (!context.user) {
-    throw new HttpError(401, 'You must be logged in to change resume format');
-  }
-
+/**
+ * Upload a resume image to S3
+ * @param imageBuffer Image buffer
+ * @param userId User ID for organizing files
+ * @param fileName Original file name
+ * @param contentType Content type of the image
+ * @returns Promise resolving to the URL of the uploaded image
+ */
+export async function uploadResumeImage(
+  imageBuffer: Buffer,
+  userId: string,
+  fileName: string,
+  contentType: string
+): Promise<string> {
+  // Create S3 uploader instance from environment variables
+  const s3Uploader = S3Uploader.fromEnv();
+  
+  // Generate S3 key
+  const key = s3Uploader.generateKey(fileName, `resumes/${userId}/images/`);
+  
+  // Upload buffer to S3
   try {
-    // Get resume
-    const resume = await context.entities.Resume.findUnique({
-      where: { id: resumeId }
-    });
-
-    if (!resume) {
-      throw new HttpError(404, 'Resume not found');
-    }
-
-    // Check if resume belongs to user
-    if (resume.userId !== context.user.id) {
-      throw new HttpError(403, 'You do not have permission to modify this resume');
-    }
-
-    // Create a new version with the new format
-    const newResume = await context.entities.Resume.create({
-      data: {
-        title: `${resume.title} (${format} format)`,
-        content: resume.content,
-        fileUrl: resume.fileUrl,
-        format,
-        version: resume.version + 1,
-        user: { connect: { id: context.user.id } }
-      }
-    });
-
-    return newResume;
-  } catch (error: any) {
-    console.error('Error changing resume format:', error);
-    throw new HttpError(500, 'Failed to change resume format: ' + error.message);
+    const url = await s3Uploader.uploadBuffer(imageBuffer, key, contentType);
+    return url;
+  } catch (error) {
+    console.error('Error uploading resume image:', error);
+    throw new Error(`Failed to upload resume image: ${(error as Error).message}`);
   }
-};
+}

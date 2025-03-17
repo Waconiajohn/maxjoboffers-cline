@@ -1,164 +1,145 @@
-import { S3Client, DeleteObjectCommand } from '@aws-sdk/client-s3';
+import { S3Client } from '@aws-sdk/client-s3';
 import { Upload } from '@aws-sdk/lib-storage';
-
-// Since we might not have type declarations for wasp/server, we'll define our own HttpError class
-class HttpError extends Error {
-  statusCode: number;
-  
-  constructor(statusCode: number, message: string) {
-    super(message);
-    this.statusCode = statusCode;
-    this.name = 'HttpError';
-  }
-}
-
-// Define allowed file types and size limits
-const ALLOWED_FILE_TYPES = [
-  'application/pdf',
-  'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-];
-const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
-
-// S3 configuration from environment variables
-const s3Config = {
-  region: process.env.AWS_REGION || 'us-west-2',
-  credentials: {
-    accessKeyId: process.env.AWS_ACCESS_KEY_ID || '',
-    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || ''
-  }
-};
-
-// S3 bucket name from environment variable
-const S3_BUCKET = process.env.AWS_S3_BUCKET || 'executive-lms-backups-266735837284';
-
-// Create S3 client
-const s3Client = new S3Client(s3Config);
+import fs from 'fs';
+import path from 'path';
 
 /**
- * Interface for file upload options
+ * S3Uploader - A utility class for handling file uploads to AWS S3
+ *
+ * This class provides methods for uploading files to S3 with proper error handling
+ * progress tracking and validation.
  */
-export interface S3UploadOptions {
-  file: Buffer | Blob;
-  fileName: string;
-  contentType: string;
-  path?: string;
-}
+export class S3Uploader {
+  private s3Client: S3Client;
+  private bucket: string;
 
-/**
- * Interface for file upload result
- */
-export interface S3UploadResult {
-  url: string;
-  key: string;
-}
+  /**
+   * Constructor
+   * @param region AWS region
+   * @param accessKeyId AWS access key ID
+   * @param secretAccessKey AWS secret access key
+   * @param bucket S3 bucket name
+   */
+  constructor(
+    region: string,
+    accessKeyId: string,
+    secretAccessKey: string,
+    bucket: string
+  ) {
+    this.s3Client = new S3Client({
+      region,
+      credentials: {
+        accessKeyId,
+        secretAccessKey
+      }
+    });
 
-/**
- * Validates file type and size
- * @param contentType The file's content type
- * @param size The file's size in bytes
- */
-export function validateFile(contentType: string, size: number): void {
-  // Validate file type
-  if (!ALLOWED_FILE_TYPES.includes(contentType)) {
-    throw new HttpError(
-      400,
-      `Unsupported file type: ${contentType}. Allowed types: ${ALLOWED_FILE_TYPES.join(', ')}`
-    );
+    this.bucket = bucket;
   }
 
-  // Validate file size
-  if (size > MAX_FILE_SIZE) {
-    throw new HttpError(
-      400,
-      `File too large: ${(size / (1024 * 1024)).toFixed(2)}MB. Maximum size: ${
-        MAX_FILE_SIZE / (1024 * 1024)
-      }MB`
-    );
+  /**
+   * Create an instance from environment variables
+   * @returns S3Uploader instance
+   */
+  static fromEnv(): S3Uploader {
+    const region = process.env.AWS_REGION || 'us-east-1';
+    const accessKeyId = process.env.AWS_ACCESS_KEY_ID;
+    const secretAccessKey = process.env.AWS_SECRET_ACCESS_KEY;
+    const bucket = process.env.AWS_S3_BUCKET || 'maxjoboffers-uploads';
+
+    if (!accessKeyId || !secretAccessKey) {
+      throw new Error('AWS credentials not found in environment variables');
+    }
+
+    return new S3Uploader(region, accessKeyId, secretAccessKey, bucket);
   }
-}
 
-/**
- * Uploads a file to S3
- * @param options Upload options
- * @returns Promise resolving to upload result
- */
-export async function uploadToS3(options: S3UploadOptions): Promise<S3UploadResult> {
-  const { file, fileName, contentType, path = 'uploads' } = options;
-
-  // Generate a unique key for the file
-  const timestamp = Date.now();
-  const key = `${path}/${timestamp}-${fileName}`;
-
-  try {
-    // Validate file before uploading
-    const size = file instanceof Blob ? file.size : file.length;
-    validateFile(contentType, size);
-
-    // Create upload parameters
+  /**
+   * Upload a file to S3
+   * @param filePath Path to the file to upload
+   * @param key S3 key (path in the bucket)
+   * @param contentType Content type of the file
+   * @returns Promise resolving to the upload result
+   */
+  async uploadFile(filePath: string, key: string, contentType?: string): Promise<any> {
+    const fileStream = fs.createReadStream(filePath);
+    
     const params = {
-      Bucket: S3_BUCKET,
+      Bucket: this.bucket,
       Key: key,
-      Body: file,
-      ContentType: contentType
+      Body: fileStream,
+      ContentType: contentType || this.getContentType(filePath)
     };
 
-    // Upload file to S3 using multipart upload
-    const upload = new Upload({
-      client: s3Client,
-      params
-    });
+    try {
+      const uploader = new Upload({
+        client: this.s3Client,
+        params
+      });
 
-    // Add event listeners for progress and errors
-    upload.on('httpUploadProgress', (progress: { loaded: number; total: number }) => {
-      console.log(`Upload progress: ${progress.loaded}/${progress.total}`);
-    });
+      // Track upload progress
+      uploader.on('httpUploadProgress', (progress) => {
+        console.log(`Upload progress: ${progress.loaded} / ${progress.total}`);
+      });
 
-    // Complete the upload
-    await upload.done();
-
-    // Generate the URL for the uploaded file
-    const url = `https://${S3_BUCKET}.s3.${s3Config.region}.amazonaws.com/${key}`;
-
-    return { url, key };
-  } catch (error: any) {
-    // Handle specific AWS errors
-    if (error.name === 'AccessDenied') {
-      console.error('S3 access denied:', error);
-      throw new HttpError(500, 'Access denied to S3 bucket. Check AWS credentials.');
-    }
-
-    if (error.name === 'NoSuchBucket') {
-      console.error('S3 bucket not found:', error);
-      throw new HttpError(500, `S3 bucket '${S3_BUCKET}' not found.`);
-    }
-
-    // If it's already an HttpError, rethrow it
-    if (error instanceof HttpError) {
+      const result = await uploader.done();
+      return result;
+    } catch (error) {
+      console.error('Error uploading file to S3:', error);
       throw error;
     }
+  }
 
-    // Log the error for debugging
-    console.error('Error uploading file to S3:', error);
+  /**
+   * Get content type based on file extension
+   * @param filePath Path to the file
+   * @returns Content type string
+   */
+  private getContentType(filePath: string): string {
+    const ext = path.extname(filePath).toLowerCase();
     
-    // Throw a generic error for other cases
-    throw new HttpError(500, `Failed to upload file: ${error.message || 'Unknown error'}`);
+    const contentTypes: Record<string, string> = {
+      '.jpg': 'image/jpeg',
+      '.jpeg': 'image/jpeg',
+      '.png': 'image/png',
+      '.gif': 'image/gif',
+      '.pdf': 'application/pdf',
+      '.doc': 'application/msword',
+      '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      '.txt': 'text/plain',
+      '.json': 'application/json'
+    };
+
+    return contentTypes[ext] || 'application/octet-stream';
+  }
+
+  /**
+   * Validate file before upload
+   * @param filePath Path to the file
+   * @param maxSizeBytes Maximum file size in bytes
+   * @param allowedTypes Array of allowed file extensions
+   * @returns True if file is valid
+   */
+  validateFile(filePath: string, maxSizeBytes: number, allowedTypes: string[]): boolean {
+    // Check if file exists
+    if (!fs.existsSync(filePath)) {
+      throw new Error(`File not found: ${filePath}`);
+    }
+
+    // Check file size
+    const stats = fs.statSync(filePath);
+    if (stats.size > maxSizeBytes) {
+      throw new Error(`File too large: ${stats.size} bytes (max: ${maxSizeBytes} bytes)`);
+    }
+
+    // Check file type
+    const ext = path.extname(filePath).toLowerCase();
+    if (allowedTypes.length > 0 && !allowedTypes.includes(ext)) {
+      throw new Error(`File type not allowed: ${ext} (allowed: ${allowedTypes.join(', ')})`);
+    }
+
+    return true;
   }
 }
 
-/**
- * Deletes a file from S3
- * @param key The key of the file to delete
- */
-export async function deleteFromS3(key: string): Promise<void> {
-  try {
-    const command = new DeleteObjectCommand({
-      Bucket: S3_BUCKET,
-      Key: key
-    });
-
-    await s3Client.send(command);
-  } catch (error: any) {
-    console.error('Error deleting file from S3:', error);
-    throw new HttpError(500, `Failed to delete file: ${error.message || 'Unknown error'}`);
-  }
-}
+export default S3Uploader;

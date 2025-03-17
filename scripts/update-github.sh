@@ -1,47 +1,47 @@
 #!/bin/bash
 
-# Update GitHub repository with the latest changes
-# This script commits and pushes changes to GitHub
+# Update GitHub Repository with Latest Changes
+#
+# This script updates the GitHub repository with the latest changes
 
-set -e
+# Set the GitHub repository URL
+GITHUB_REPO="git@github.com:maxjoboffers/maxjoboffers.git"
 
-# Log function
-log() {
-  echo "$(date '+%Y-%m-%d %H:%M:%S') - $1"
-}
+# Set the branch name
+BRANCH_NAME="feature/file-upload-s3"
 
-# Check if git is installed
-if ! command -v git &> /dev/null; then
-  log "Git is not installed. Please install git and try again."
-  exit 1
+# Check if the branch already exists
+if git rev-parse --verify $BRANCH_NAME >/dev/null 2>&1; then
+  echo "Branch $BRANCH_NAME already exists, checking it out..."
+  git checkout $BRANCH_NAME
+else
+  echo "Creating and checking out branch $BRANCH_NAME..."
+  git checkout -b $BRANCH_NAME
 fi
-
-# Check if the current directory is a git repository
-if [ ! -d ".git" ]; then
-  log "Current directory is not a git repository. Please run this script from the root of the repository."
-  exit 1
-fi
-
-# Create a new branch for the changes
-BRANCH_NAME="feature/s3-file-uploads-$(date +%Y%m%d)"
-log "Creating new branch: $BRANCH_NAME"
-git checkout -b $BRANCH_NAME
 
 # Add all changes
-log "Adding changes to git"
+echo "Adding all changes..."
 git add .
 
-# Commit changes
-log "Committing changes"
-git commit -m "Implement S3 file uploads with proper error handling and validation"
+# Commit the changes
+echo "Committing changes..."
+git commit -m "Add file upload functionality with S3 integration"
 
-# Push changes to GitHub
-log "Pushing changes to GitHub"
-git push origin $BRANCH_NAME
+# Push the changes to GitHub
+echo "Pushing changes to GitHub..."
+git push -u origin $BRANCH_NAME
 
-# Create pull request
-log "Creating pull request"
-echo "Please create a pull request on GitHub from the branch $BRANCH_NAME to main."
-echo "Visit: https://github.com/yourusername/maxjoboffers/compare/main...$BRANCH_NAME"
+# Create a pull request
+echo "Creating a pull request..."
+PR_URL=$(gh pr create --title "Add file upload functionality with S3 integration" --body "This PR adds file upload functionality with S3 integration, including:
 
-log "GitHub update completed successfully!"
+- File upload code to use the correct S3 bucket and region
+- Installation of @aws-sdk/lib-storage for handling file uploads
+- Proper error handling for S3 operations
+- File type validation and size limits
+- CloudWatch monitoring for S3 operations
+- Application logging for file uploads
+- Backup procedures for important files" --base main --head $BRANCH_NAME)
+
+echo "Pull request created: $PR_URL"
+echo "Done!"
