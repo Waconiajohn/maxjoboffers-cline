@@ -1,151 +1,249 @@
 #!/usr/bin/env node
 
 /**
- * Setup CloudWatch Monitoring for S3 Operations
- * 
- * This script sets up CloudWatch monitoring for S3 operations
- */
-
-const { execSync } = require('child_process');
-const fs = require('fs');
-const path = require('path');
-
-// Path to the PEM key file
-const pemKeyPath = '/Users/johnschrup/Desktop/PEM/maxjoboffers-dev-key.pem';
-
-// EC2 instance details
-const ec2User = 'ec2-user';
-const ec2Host = '18.233.6.175';
-const ec2ProjectPath = '/home/ec2-user/maxjoboffers';
-
-// Create the CloudWatch monitoring script content
-const cloudWatchMonitoringContent = `#!/usr/bin/env node
-
-/**
- * CloudWatch Monitoring for S3 Operations
+ * Setup CloudWatch Monitoring
  *
  * This script sets up CloudWatch monitoring for S3 operations
  */
 
-const { CloudWatchClient, PutMetricDataCommand } = require('@aws-sdk/client-cloudwatch');
-const fs = require('fs');
-const path = require('path');
-require('dotenv').config();
+const { 
+  CloudWatchClient, 
+  PutMetricAlarmCommand,
+  PutDashboardCommand
+} = require('@aws-sdk/client-cloudwatch');
 
-// Get AWS credentials from environment variables
-const accessKeyId = process.env.AWS_ACCESS_KEY_ID;
-const secretAccessKey = process.env.AWS_SECRET_ACCESS_KEY;
-const region = process.env.AWS_REGION || 'us-west-2';
+const {
+  CloudWatchEventsClient,
+  PutRuleCommand,
+  PutTargetsCommand
+} = require('@aws-sdk/client-cloudwatch-events');
 
-// Check if AWS credentials are available
-if (!accessKeyId || !secretAccessKey) {
-  console.error('AWS credentials not found in environment variables');
-  process.exit(1);
-}
+// Define the AWS region and bucket name from environment variables
+const REGION = process.env.AWS_REGION || 'us-west-2';
+const BUCKET_NAME = process.env.AWS_S3_BUCKET || 'executive-lms-backups-266735837284';
 
 // Create CloudWatch client
 const cloudWatchClient = new CloudWatchClient({
-  region,
+  region: REGION,
   credentials: {
-    accessKeyId,
-    secretAccessKey
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY
   }
 });
 
-// Log file path
-const logFilePath = path.join(__dirname, '..', 'logs', 's3-operations.log');
+// Create CloudWatch Events client
+const cloudWatchEventsClient = new CloudWatchEventsClient({
+  region: REGION,
+  credentials: {
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY
+  }
+});
 
-// Create logs directory if it doesn't exist
-const logsDir = path.join(__dirname, '..', 'logs');
-if (!fs.existsSync(logsDir)) {
-  fs.mkdirSync(logsDir, { recursive: true });
-}
-
-// Function to log S3 operations
-const logS3Operation = async (operation, bucket, key, success) => {
+// Function to create a CloudWatch alarm for S3 operations
+const createS3OperationsAlarm = async () => {
   try {
-    // Log to file
-    const timestamp = new Date().toISOString();
-    const logEntry = \`\${timestamp} - \${operation} - Bucket: \${bucket} - Key: \${key} - Success: \${success}\n\`;
-    fs.appendFileSync(logFilePath, logEntry);
-
-    // Send metric to CloudWatch
+    console.log('Creating CloudWatch alarm for S3 operations...');
+    
     const params = {
-      MetricData: [
+      AlarmName: `${BUCKET_NAME}-4xx-errors`,
+      AlarmDescription: `Alarm for 4xx errors on ${BUCKET_NAME} bucket`,
+      ActionsEnabled: true,
+      MetricName: '4xxErrors',
+      Namespace: 'AWS/S3',
+      Statistic: 'Sum',
+      Dimensions: [
         {
-          MetricName: 'S3Operations',
-          Dimensions: [
-            {
-              Name: 'Operation',
-              Value: operation
-            },
-            {
-              Name: 'Bucket',
-              Value: bucket
-            },
-            {
-              Name: 'Success',
-              Value: success.toString()
-            }
-          ],
-          Unit: 'Count',
-          Value: 1
+          Name: 'BucketName',
+          Value: BUCKET_NAME
         }
       ],
-      Namespace: 'MaxJobOffers/S3'
+      Period: 300, // 5 minutes
+      EvaluationPeriods: 1,
+      Threshold: 5,
+      ComparisonOperator: 'GreaterThanThreshold',
+      TreatMissingData: 'notBreaching'
     };
-
-    const command = new PutMetricDataCommand(params);
-    await cloudWatchClient.send(command);
-    console.log(\`Sent metric to CloudWatch for \${operation} operation on \${bucket}/\${key}\`);
+    
+    const command = new PutMetricAlarmCommand(params);
+    const response = await cloudWatchClient.send(command);
+    
+    console.log('CloudWatch alarm created successfully!');
+    return response;
   } catch (error) {
-    console.error('Error sending metric to CloudWatch:', error);
+    console.error('Error creating CloudWatch alarm:', error);
+    throw error;
   }
 };
 
-// Export the function
-module.exports = {
-  logS3Operation
+// Function to create a CloudWatch dashboard for S3 operations
+const createS3Dashboard = async () => {
+  try {
+    console.log('Creating CloudWatch dashboard for S3 operations...');
+    
+    const dashboardBody = {
+      widgets: [
+        {
+          type: 'metric',
+          x: 0,
+          y: 0,
+          width: 12,
+          height: 6,
+          properties: {
+            metrics: [
+              ['AWS/S3', 'AllRequests', 'BucketName', BUCKET_NAME],
+              ['AWS/S3', 'GetRequests', 'BucketName', BUCKET_NAME],
+              ['AWS/S3', 'PutRequests', 'BucketName', BUCKET_NAME]
+            ],
+            view: 'timeSeries',
+            stacked: false,
+            region: REGION,
+            title: 'S3 Requests',
+            period: 300
+          }
+        },
+        {
+          type: 'metric',
+          x: 0,
+          y: 6,
+          width: 12,
+          height: 6,
+          properties: {
+            metrics: [
+              ['AWS/S3', '4xxErrors', 'BucketName', BUCKET_NAME],
+              ['AWS/S3', '5xxErrors', 'BucketName', BUCKET_NAME]
+            ],
+            view: 'timeSeries',
+            stacked: false,
+            region: REGION,
+            title: 'S3 Errors',
+            period: 300
+          }
+        },
+        {
+          type: 'metric',
+          x: 12,
+          y: 0,
+          width: 12,
+          height: 6,
+          properties: {
+            metrics: [
+              ['AWS/S3', 'BytesDownloaded', 'BucketName', BUCKET_NAME],
+              ['AWS/S3', 'BytesUploaded', 'BucketName', BUCKET_NAME]
+            ],
+            view: 'timeSeries',
+            stacked: false,
+            region: REGION,
+            title: 'S3 Data Transfer',
+            period: 300
+          }
+        },
+        {
+          type: 'metric',
+          x: 12,
+          y: 6,
+          width: 12,
+          height: 6,
+          properties: {
+            metrics: [
+              ['AWS/S3', 'FirstByteLatency', 'BucketName', BUCKET_NAME],
+              ['AWS/S3', 'TotalRequestLatency', 'BucketName', BUCKET_NAME]
+            ],
+            view: 'timeSeries',
+            stacked: false,
+            region: REGION,
+            title: 'S3 Latency',
+            period: 300
+          }
+        }
+      ]
+    };
+    
+    const params = {
+      DashboardName: `${BUCKET_NAME}-dashboard`,
+      DashboardBody: JSON.stringify(dashboardBody)
+    };
+    
+    const command = new PutDashboardCommand(params);
+    const response = await cloudWatchClient.send(command);
+    
+    console.log('CloudWatch dashboard created successfully!');
+    return response;
+  } catch (error) {
+    console.error('Error creating CloudWatch dashboard:', error);
+    throw error;
+  }
 };
 
-// If this script is run directly, log a test operation
-if (require.main === module) {
-  console.log('Testing CloudWatch monitoring for S3 operations...');
-  logS3Operation('TEST', 'test-bucket', 'test-key', true)
-    .then(() => console.log('Test completed successfully'))
-    .catch(error => console.error('Test failed:', error));
-}
-`;
+// Function to create a CloudWatch Events rule for S3 object creation
+const createS3ObjectCreationRule = async () => {
+  try {
+    console.log('Creating CloudWatch Events rule for S3 object creation...');
+    
+    // Create the rule
+    const ruleParams = {
+      Name: `${BUCKET_NAME}-object-created`,
+      Description: `Rule for S3 object creation in ${BUCKET_NAME} bucket`,
+      EventPattern: JSON.stringify({
+        source: ['aws.s3'],
+        'detail-type': ['AWS API Call via CloudTrail'],
+        detail: {
+          eventSource: ['s3.amazonaws.com'],
+          eventName: ['PutObject', 'CompleteMultipartUpload'],
+          requestParameters: {
+            bucketName: [BUCKET_NAME]
+          }
+        }
+      }),
+      State: 'ENABLED'
+    };
+    
+    const ruleCommand = new PutRuleCommand(ruleParams);
+    const ruleResponse = await cloudWatchEventsClient.send(ruleCommand);
+    
+    console.log('CloudWatch Events rule created successfully!');
+    
+    // Note: In a real implementation, you would set up a target for the rule,
+    // such as a Lambda function to process the events. For this example, we'll
+    // just create the rule without a target.
+    
+    console.log('Note: No target has been set for the rule. In a production environment, you would set up a Lambda function or other target to process the events.');
+    
+    return ruleResponse;
+  } catch (error) {
+    console.error('Error creating CloudWatch Events rule:', error);
+    throw error;
+  }
+};
 
-// Create a temporary file with the CloudWatch monitoring script content
-const tempFilePath = path.join(__dirname, 'temp-cloudwatch-monitoring.js');
-fs.writeFileSync(tempFilePath, cloudWatchMonitoringContent);
+// Main function
+const main = async () => {
+  try {
+    // Check if AWS credentials are set
+    if (!process.env.AWS_ACCESS_KEY_ID || !process.env.AWS_SECRET_ACCESS_KEY) {
+      console.error('AWS credentials are not set. Please set AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY environment variables.');
+      process.exit(1);
+    }
+    
+    console.log(`Setting up CloudWatch monitoring for S3 bucket: ${BUCKET_NAME}`);
+    
+    // Create CloudWatch alarm
+    await createS3OperationsAlarm();
+    
+    // Create CloudWatch dashboard
+    await createS3Dashboard();
+    
+    // Create CloudWatch Events rule
+    await createS3ObjectCreationRule();
+    
+    console.log('\nCloudWatch monitoring setup completed successfully!');
+    console.log(`You can view the dashboard at: https://${REGION}.console.aws.amazon.com/cloudwatch/home?region=${REGION}#dashboards:name=${BUCKET_NAME}-dashboard`);
+    console.log(`You can view the alarm at: https://${REGION}.console.aws.amazon.com/cloudwatch/home?region=${REGION}#alarmsV2:alarm/${BUCKET_NAME}-4xx-errors`);
+  } catch (error) {
+    console.error('Setup failed:', error);
+    process.exit(1);
+  }
+};
 
-try {
-  // Create the scripts directory on the EC2 instance if it doesn't exist
-  console.log('Creating scripts directory on EC2 instance...');
-  execSync(`ssh -i ${pemKeyPath} ${ec2User}@${ec2Host} "mkdir -p ${ec2ProjectPath}/scripts"`, { stdio: 'inherit' });
-
-  // Upload the CloudWatch monitoring script to the EC2 instance
-  console.log('Uploading CloudWatch monitoring script to EC2 instance...');
-  execSync(`scp -i ${pemKeyPath} ${tempFilePath} ${ec2User}@${ec2Host}:${ec2ProjectPath}/scripts/cloudwatch-monitoring.js`);
-  console.log('Successfully uploaded CloudWatch monitoring script to EC2 instance');
-
-  // Make the script executable
-  console.log('Making the script executable...');
-  execSync(`ssh -i ${pemKeyPath} ${ec2User}@${ec2Host} "chmod +x ${ec2ProjectPath}/scripts/cloudwatch-monitoring.js"`, { stdio: 'inherit' });
-  console.log('Successfully made the script executable');
-
-  // Test the CloudWatch monitoring script
-  console.log('\nTesting CloudWatch monitoring script...');
-  execSync(`ssh -i ${pemKeyPath} ${ec2User}@${ec2Host} "cd ${ec2ProjectPath} && node scripts/cloudwatch-monitoring.js"`, { stdio: 'inherit' });
-} catch (error) {
-  console.error('Error setting up CloudWatch monitoring:', error.message);
-  process.exit(1);
-} finally {
-  // Clean up the temporary file
-  fs.unlinkSync(tempFilePath);
-  console.log('Cleaned up temporary files');
-}
-
-console.log('\nCloudWatch monitoring for S3 operations set up successfully');
+// Run the main function
+main();

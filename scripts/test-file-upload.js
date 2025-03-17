@@ -1,91 +1,103 @@
 #!/usr/bin/env node
 
 /**
- * Test File Upload to S3
+ * Test File Upload
  *
  * This script tests file uploads to S3 using the AWS SDK
  */
 
 const fs = require('fs');
 const path = require('path');
-const { S3Client } = require('@aws-sdk/client-s3');
 const { Upload } = require('@aws-sdk/lib-storage');
-require('dotenv').config();
+const { S3Client } = require('@aws-sdk/client-s3');
 
-// Get AWS credentials from environment variables
-const accessKeyId = process.env.AWS_ACCESS_KEY_ID;
-const secretAccessKey = process.env.AWS_SECRET_ACCESS_KEY;
-const region = process.env.AWS_REGION || 'us-west-2';
-const bucket = process.env.AWS_S3_BUCKET || 'maxjoboffers-uploads';
+// Define the AWS region and bucket name from environment variables
+const REGION = process.env.AWS_REGION || 'us-west-2';
+const BUCKET_NAME = process.env.AWS_S3_BUCKET || 'executive-lms-backups-266735837284';
 
-// Check if AWS credentials are available
-if (!accessKeyId || !secretAccessKey) {
-  console.error('AWS credentials not found in environment variables');
-  process.exit(1);
-}
-
-// Create S3 client
+// Create an S3 client
 const s3Client = new S3Client({
-  region,
+  region: REGION,
   credentials: {
-    accessKeyId,
-    secretAccessKey
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY
   }
 });
 
-// Create a test file
-const testFileName = `test-file-${Date.now()}.txt`;
-const testFilePath = path.join(__dirname, testFileName);
-const testFileContent = `This is a test file created at ${new Date().toISOString()}`;
-
-fs.writeFileSync(testFilePath, testFileContent);
-console.log(`Created test file: ${testFilePath}`);
-
-// Upload the file to S3
-const upload = async () => {
+// Function to upload a file to S3
+const uploadFile = async (filePath, key, contentType) => {
   try {
-    // Generate a random key for the file
-    const key = `test-uploads/${Date.now()}-${testFileName}`;
+    // Read the file
+    const fileContent = fs.readFileSync(filePath);
     
-    // Create upload parameters
-    const params = {
-      Bucket: bucket,
+    // Create the upload parameters
+    const uploadParams = {
+      Bucket: BUCKET_NAME,
       Key: key,
-      Body: fs.createReadStream(testFilePath),
-      ContentType: 'text/plain'
+      Body: fileContent,
+      ContentType: contentType || 'application/octet-stream'
     };
-
-    // Upload the file
-    console.log(`Uploading file to S3 bucket: ${bucket} with key: ${key}`);
-    const uploader = new Upload({
+    
+    console.log(`Uploading file ${filePath} to S3 bucket ${BUCKET_NAME} with key ${key}...`);
+    
+    // Create a managed upload
+    const upload = new Upload({
       client: s3Client,
-      params
+      params: uploadParams
     });
-
-    uploader.on('httpUploadProgress', (progress) => {
-      console.log(`Upload progress: ${progress.loaded}/${progress.total} bytes`);
+    
+    // Add event listeners for progress
+    upload.on('httpUploadProgress', (progress) => {
+      console.log(`Upload progress: ${Math.round((progress.loaded || 0) / (progress.total || 1) * 100)}%`);
     });
-
-    const result = await uploader.done();
-    console.log(`File uploaded successfully to ${result.Location}`);
     
-    // Clean up the test file
-    fs.unlinkSync(testFilePath);
-    console.log(`Deleted test file: ${testFilePath}`);
-    
+    // Execute the upload
+    const result = await upload.done();
+    console.log('File uploaded successfully:', result.Location);
     return result;
   } catch (error) {
     console.error('Error uploading file to S3:', error);
-    
-    // Clean up the test file
-    if (fs.existsSync(testFilePath)) {
-      fs.unlinkSync(testFilePath);
-      console.log(`Deleted test file: ${testFilePath}`);
+    throw error;
+  }
+};
+
+// Function to generate a random file name
+const generateRandomFileName = (extension) => {
+  const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+  const random = Math.random().toString(36).substring(2, 8);
+  return `test-${timestamp}-${random}.${extension}`;
+};
+
+// Main function
+const main = async () => {
+  try {
+    // Check if AWS credentials are set
+    if (!process.env.AWS_ACCESS_KEY_ID || !process.env.AWS_SECRET_ACCESS_KEY) {
+      console.error('AWS credentials are not set. Please set AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY environment variables.');
+      process.exit(1);
     }
     
+    // Create a test file
+    const testFilePath = path.join(__dirname, 'test-file.txt');
+    const testFileContent = `This is a test file created at ${new Date().toISOString()}\n`;
+    fs.writeFileSync(testFilePath, testFileContent);
+    
+    // Upload the test file
+    const key = `test-files/${generateRandomFileName('txt')}`;
+    const result = await uploadFile(testFilePath, key, 'text/plain');
+    
+    // Clean up
+    fs.unlinkSync(testFilePath);
+    
+    console.log('\nTest completed successfully!');
+    console.log(`File uploaded to: ${result.Location}`);
+    console.log(`S3 URI: s3://${BUCKET_NAME}/${key}`);
+    console.log(`Direct URL: https://${BUCKET_NAME}.s3.${REGION}.amazonaws.com/${key}`);
+  } catch (error) {
+    console.error('Test failed:', error);
     process.exit(1);
   }
 };
 
-// Run the upload function
-upload();
+// Run the main function
+main();

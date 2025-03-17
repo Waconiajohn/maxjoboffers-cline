@@ -12,6 +12,14 @@ Tests file uploads to S3 using the AWS SDK.
 node scripts/test-file-upload.js
 ```
 
+### test-resume-upload.js
+
+Tests uploading a resume to S3 and simulates parsing and matching it to a job description.
+
+```bash
+node scripts/test-resume-upload.js path/to/resume.pdf
+```
+
 ### update-ec2-test-file-upload.js
 
 Updates the EC2 instance's test-file-upload.js script with the correct implementation.
@@ -92,6 +100,57 @@ Updates the GitHub repository with the latest changes.
 ```bash
 ./scripts/update-github.sh
 ```
+
+### sync-codebases.js
+
+Synchronizes the codebases between cursor-tutor and maxjoboffers-github.
+
+```bash
+# Synchronize all codebases (automatically selects the source with the most files)
+node scripts/sync-codebases.js
+
+# Specify a source codebase to use
+node scripts/sync-codebases.js --source=cursor-tutor
+node scripts/sync-codebases.js --source=github
+
+# Only verify if codebases are in sync without making changes
+node scripts/sync-codebases.js --verify
+```
+
+### analyze-codebases.js
+
+Analyzes the codebases to determine which one has the most updated code.
+
+```bash
+# Analyze all codebases and provide a recommendation
+node scripts/analyze-codebases.js
+```
+
+This script:
+- Counts the number of files in each codebase
+- Identifies the most recently modified files
+- Calculates average modification times
+- Counts unique files in each codebase
+- Provides a recommendation on which codebase to use as the source for synchronization
+
+### compare-env-files.js
+
+Compares the .env files across the different codebases to determine which one is the most up-to-date.
+
+```bash
+# Compare .env files and provide a recommendation
+node scripts/compare-env-files.js
+```
+
+This script:
+- Checks for the existence of .env files in each codebase
+- Compares file sizes (number of lines)
+- Compares last modified times
+- Identifies the most recent .env file
+- Compares environment variables across the files
+- Shows which variables are present or missing in each file
+- Provides a recommendation on which .env file to use as the source
+- Suggests commands to synchronize .env files
 
 ## Database Scripts
 

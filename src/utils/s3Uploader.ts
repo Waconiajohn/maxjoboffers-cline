@@ -1,145 +1,137 @@
-import { S3Client } from '@aws-sdk/client-s3';
 import { Upload } from '@aws-sdk/lib-storage';
-import fs from 'fs';
-import path from 'path';
+import { 
+  S3Client, 
+  GetObjectCommand, 
+  DeleteObjectCommand,
+  CompleteMultipartUploadCommandOutput
+} from '@aws-sdk/client-s3';
+
+// Define the AWS region and bucket name from environment variables
+const REGION = process.env.AWS_REGION || 'us-west-2';
+const BUCKET_NAME = process.env.AWS_S3_BUCKET || 'executive-lms-backups-266735837284';
+
+// Maximum file size in bytes (10MB)
+const MAX_FILE_SIZE = 10 * 1024 * 1024;
+
+// Allowed file types
+const ALLOWED_FILE_TYPES = [
+  'application/pdf',
+  'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'image/jpeg',
+  'image/png'
+];
+
+// Create an S3 client
+const s3Client = new S3Client({
+  region: REGION,
+  credentials: {
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID || '',
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || ''
+  }
+});
 
 /**
- * S3Uploader - A utility class for handling file uploads to AWS S3
- *
- * This class provides methods for uploading files to S3 with proper error handling
- * progress tracking and validation.
+ * Interface for file upload parameters
  */
-export class S3Uploader {
-  private s3Client: S3Client;
-  private bucket: string;
-
-  /**
-   * Constructor
-   * @param region AWS region
-   * @param accessKeyId AWS access key ID
-   * @param secretAccessKey AWS secret access key
-   * @param bucket S3 bucket name
-   */
-  constructor(
-    region: string,
-    accessKeyId: string,
-    secretAccessKey: string,
-    bucket: string
-  ) {
-    this.s3Client = new S3Client({
-      region,
-      credentials: {
-        accessKeyId,
-        secretAccessKey
-      }
-    });
-
-    this.bucket = bucket;
-  }
-
-  /**
-   * Create an instance from environment variables
-   * @returns S3Uploader instance
-   */
-  static fromEnv(): S3Uploader {
-    const region = process.env.AWS_REGION || 'us-west-2';
-    const accessKeyId = process.env.AWS_ACCESS_KEY_ID;
-    const secretAccessKey = process.env.AWS_SECRET_ACCESS_KEY;
-    const bucket = process.env.AWS_S3_BUCKET || 'maxjoboffers-uploads';
-
-    if (!accessKeyId || !secretAccessKey) {
-      throw new Error('AWS credentials not found in environment variables');
-    }
-
-    return new S3Uploader(region, accessKeyId, secretAccessKey, bucket);
-  }
-
-  /**
-   * Upload a file to S3
-   * @param filePath Path to the file to upload
-   * @param key S3 key (path in the bucket)
-   * @param contentType Content type of the file
-   * @returns Promise resolving to the upload result
-   */
-  async uploadFile(filePath: string, key: string, contentType?: string): Promise<any> {
-    const fileStream = fs.createReadStream(filePath);
-    
-    const params = {
-      Bucket: this.bucket,
-      Key: key,
-      Body: fileStream,
-      ContentType: contentType || this.getContentType(filePath)
-    };
-
-    try {
-      const uploader = new Upload({
-        client: this.s3Client,
-        params
-      });
-
-      // Track upload progress
-      uploader.on('httpUploadProgress', (progress) => {
-        console.log(`Upload progress: ${progress.loaded} / ${progress.total}`);
-      });
-
-      const result = await uploader.done();
-      return result;
-    } catch (error) {
-      console.error('Error uploading file to S3:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Get content type based on file extension
-   * @param filePath Path to the file
-   * @returns Content type string
-   */
-  private getContentType(filePath: string): string {
-    const ext = path.extname(filePath).toLowerCase();
-    
-    const contentTypes: Record<string, string> = {
-      '.jpg': 'image/jpeg',
-      '.jpeg': 'image/jpeg',
-      '.png': 'image/png',
-      '.gif': 'image/gif',
-      '.pdf': 'application/pdf',
-      '.doc': 'application/msword',
-      '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-      '.txt': 'text/plain',
-      '.json': 'application/json'
-    };
-
-    return contentTypes[ext] || 'application/octet-stream';
-  }
-
-  /**
-   * Validate file before upload
-   * @param filePath Path to the file
-   * @param maxSizeBytes Maximum file size in bytes
-   * @param allowedTypes Array of allowed file extensions
-   * @returns True if file is valid
-   */
-  validateFile(filePath: string, maxSizeBytes: number, allowedTypes: string[]): boolean {
-    // Check if file exists
-    if (!fs.existsSync(filePath)) {
-      throw new Error(`File not found: ${filePath}`);
-    }
-
-    // Check file size
-    const stats = fs.statSync(filePath);
-    if (stats.size > maxSizeBytes) {
-      throw new Error(`File too large: ${stats.size} bytes (max: ${maxSizeBytes} bytes)`);
-    }
-
-    // Check file type
-    const ext = path.extname(filePath).toLowerCase();
-    if (allowedTypes.length > 0 && !allowedTypes.includes(ext)) {
-      throw new Error(`File type not allowed: ${ext} (allowed: ${allowedTypes.join(', ')})`);
-    }
-
-    return true;
-  }
+interface UploadParams {
+  file: File | Blob;
+  key: string;
+  contentType?: string;
+  metadata?: Record<string, string>;
 }
 
-export default S3Uploader;
+/**
+ * Validates a file before upload
+ * @param file The file to validate
+ * @param contentType The content type of the file
+ * @returns An error message if validation fails, null otherwise
+ */
+const validateFile = (file: File | Blob, contentType?: string): string | null => {
+  // Check file size
+  if (file.size > MAX_FILE_SIZE) {
+    return `File size exceeds the maximum allowed size of ${MAX_FILE_SIZE / (1024 * 1024)}MB`;
+  }
+
+  // Check file type if contentType is provided
+  if (contentType && !ALLOWED_FILE_TYPES.includes(contentType)) {
+    return `File type ${contentType} is not allowed. Allowed types: ${ALLOWED_FILE_TYPES.join(', ')}`;
+  }
+
+  return null;
+};
+
+/**
+ * Uploads a file to S3
+ * @param params The upload parameters
+ * @returns A promise that resolves to the S3 upload result
+ * @throws Error if validation fails or upload fails
+ */
+export const uploadFile = async (params: UploadParams): Promise<CompleteMultipartUploadCommandOutput> => {
+  const { file, key, contentType, metadata } = params;
+
+  // Validate the file
+  const validationError = validateFile(file, contentType);
+  if (validationError) {
+    throw new Error(validationError);
+  }
+
+  try {
+    // Create the upload parameters
+    const uploadParams = {
+      Bucket: BUCKET_NAME,
+      Key: key,
+      Body: file,
+      ContentType: contentType || 'application/octet-stream',
+      Metadata: metadata
+    };
+
+    // Create a managed upload
+    const upload = new Upload({
+      client: s3Client,
+      params: uploadParams
+    });
+
+    // Add event listeners for progress
+    upload.on('httpUploadProgress', (progress) => {
+      console.log(`Upload progress: ${Math.round((progress.loaded || 0) / (progress.total || 1) * 100)}%`);
+    });
+
+    // Execute the upload
+    const result = await upload.done();
+    console.log('File uploaded successfully:', result.Location);
+    return result;
+  } catch (error) {
+    console.error('Error uploading file to S3:', error);
+    throw error;
+  }
+};
+
+/**
+ * Generates a URL for accessing a file from S3
+ * @param key The key of the file in S3
+ * @returns The S3 URL for the file
+ */
+export const getDownloadUrl = (key: string): string => {
+  return `https://${BUCKET_NAME}.s3.${REGION}.amazonaws.com/${encodeURIComponent(key)}`;
+};
+
+/**
+ * Deletes a file from S3
+ * @param key The key of the file in S3
+ * @returns A promise that resolves when the file is deleted
+ */
+export const deleteFile = async (key: string): Promise<void> => {
+  try {
+    const command = new DeleteObjectCommand({
+      Bucket: BUCKET_NAME,
+      Key: key
+    });
+
+    await s3Client.send(command);
+    console.log(`File ${key} deleted successfully`);
+  } catch (error) {
+    console.error('Error deleting file from S3:', error);
+    throw error;
+  }
+};
