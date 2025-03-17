@@ -15,7 +15,7 @@ require('dotenv').config();
 // Get AWS credentials from environment variables
 const accessKeyId = process.env.AWS_ACCESS_KEY_ID;
 const secretAccessKey = process.env.AWS_SECRET_ACCESS_KEY;
-const region = process.env.AWS_REGION || 'us-east-1';
+const region = process.env.AWS_REGION || 'us-west-2';
 const bucket = process.env.AWS_S3_BUCKET || 'maxjoboffers-uploads';
 
 // Check if AWS credentials are available

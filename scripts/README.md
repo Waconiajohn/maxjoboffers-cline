@@ -56,6 +56,14 @@ Sets up backup procedures for important files.
 node scripts/setup-backup-procedures.js
 ```
 
+### verify-aws-regions.js
+
+Verifies that all AWS resources are in the correct region (us-west-2).
+
+```bash
+node scripts/verify-aws-regions.js
+```
+
 ## S3 Uploader Utility
 
 The S3 uploader utility is located in `src/utils/s3Uploader.ts`. It provides a simple interface for uploading files to S3.
