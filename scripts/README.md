@@ -66,13 +66,33 @@ node scripts/setup-backup-procedures.js
 
 ### verify-aws-regions.js
 
-Verifies that all AWS resources are in the correct region (us-west-2).
+Verifies the AWS regions for different services and provides a summary of the configuration.
 
 ```bash
 node scripts/verify-aws-regions.js
 ```
 
-## S3 Uploader Utility
+### migrate-s3-bucket.js
+
+Migrates data from an S3 bucket in one region to a new bucket in another region.
+
+```bash
+# Migrate data from source bucket to target bucket
+node scripts/migrate-s3-bucket.js
+
+# Delete the source bucket after verification
+node scripts/migrate-s3-bucket.js --delete-source
+```
+
+This script:
+- Creates a new bucket in the target region (us-east-1)
+- Copies all objects from the source bucket to the target bucket
+- Verifies that all objects were copied successfully
+- Provides instructions for updating the application configuration
+
+## S3 Utilities
+
+### S3 Uploader
 
 The S3 uploader utility is located in `src/utils/s3Uploader.ts`. It provides a simple interface for uploading files to S3.
 
@@ -87,6 +107,33 @@ const result = await uploadFile({
   key: 'path/to/file.ext',
   contentType: 'application/octet-stream'
 });
+
+console.log('File uploaded successfully:', result.Location);
+```
+
+### Multi-Region S3 Client
+
+The multi-region S3 client utility is located in `src/utils/multiRegionS3Client.js`. It provides S3 clients for different AWS regions to handle cross-region access between RDS and S3 buckets.
+
+Example usage:
+
+```javascript
+const { 
+  getS3Client, 
+  uploadFileToRegion, 
+  DEFAULT_REGION, 
+  RDS_REGION 
+} = require('./multiRegionS3Client');
+
+// Get an S3 client for a specific region
+const s3Client = getS3Client('us-east-1');
+
+// Upload a file to S3 in a specific region
+const result = await uploadFileToRegion({
+  Key: 'path/to/file.ext',
+  Body: fileBuffer,
+  ContentType: 'application/octet-stream'
+}, 'us-east-1');
 
 console.log('File uploaded successfully:', result.Location);
 ```

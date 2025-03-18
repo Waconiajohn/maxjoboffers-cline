@@ -3,236 +3,136 @@
 /**
  * Verify AWS Regions
  *
- * This script verifies that all AWS resources are in the correct region (us-west-2)
+ * This script verifies the AWS regions for different services and provides
+ * a summary of the configuration.
  */
 
-const { 
-  S3Client, 
-  ListBucketsCommand, 
-  GetBucketLocationCommand 
-} = require('@aws-sdk/client-s3');
-const { 
-  EC2Client, 
-  DescribeInstancesCommand 
-} = require('@aws-sdk/client-ec2');
-const { 
-  CloudWatchClient, 
-  ListMetricsCommand 
-} = require('@aws-sdk/client-cloudwatch');
-const { 
-  RDSClient, 
-  DescribeDBInstancesCommand 
-} = require('@aws-sdk/client-rds');
+const { execSync } = require('child_process');
+const fs = require('fs');
+const path = require('path');
 require('dotenv').config();
 
-// Get AWS credentials from environment variables
-const accessKeyId = process.env.AWS_ACCESS_KEY_ID;
-const secretAccessKey = process.env.AWS_SECRET_ACCESS_KEY;
-const expectedRegion = process.env.AWS_REGION || 'us-west-2';
+// Extract region information from environment variables
+const s3Region = process.env.AWS_REGION || 'us-west-2';
+const s3Bucket = process.env.AWS_S3_BUCKET || 'executive-lms-backups-266735837284';
+const databaseUrl = process.env.DATABASE_URL || '';
 
-// Check if AWS credentials are available
-if (!accessKeyId || !secretAccessKey) {
-  console.error('AWS credentials not found in environment variables');
-  process.exit(1);
+// Extract RDS region from the database URL
+let rdsRegion = 'unknown';
+if (databaseUrl.includes('us-east-1')) {
+  rdsRegion = 'us-east-1';
+} else if (databaseUrl.includes('us-east-2')) {
+  rdsRegion = 'us-east-2';
+} else if (databaseUrl.includes('us-west-1')) {
+  rdsRegion = 'us-west-1';
+} else if (databaseUrl.includes('us-west-2')) {
+  rdsRegion = 'us-west-2';
 }
 
-// Create clients for different AWS services
-const s3Client = new S3Client({
-  region: expectedRegion,
-  credentials: {
-    accessKeyId,
-    secretAccessKey
-  }
-});
+console.log('=== AWS Region Configuration ===');
+console.log(`S3 Bucket: ${s3Bucket}`);
+console.log(`S3 Region (from .env): ${s3Region}`);
+console.log(`RDS Region (from DATABASE_URL): ${rdsRegion}`);
+console.log('\nNOTE: The actual regions in your AWS account may differ from what is configured in the .env file.');
 
-const ec2Client = new EC2Client({
-  region: expectedRegion,
-  credentials: {
-    accessKeyId,
-    secretAccessKey
-  }
-});
-
-const cloudWatchClient = new CloudWatchClient({
-  region: expectedRegion,
-  credentials: {
-    accessKeyId,
-    secretAccessKey
-  }
-});
-
-const rdsClient = new RDSClient({
-  region: expectedRegion,
-  credentials: {
-    accessKeyId,
-    secretAccessKey
-  }
-});
-
-// Function to get S3 bucket region
-const getBucketRegion = async (bucketName) => {
-  try {
-    const command = new GetBucketLocationCommand({ Bucket: bucketName });
-    const response = await s3Client.send(command);
-    
-    // AWS returns null for us-east-1
-    let region = response.LocationConstraint || 'us-east-1';
-    
-    return region;
-  } catch (error) {
-    console.error(`Error getting region for bucket ${bucketName}:`, error);
-    return 'unknown';
-  }
-};
-
-// Function to verify specific S3 bucket
-const verifyS3Buckets = async () => {
-  try {
-    console.log('\n=== Verifying S3 Buckets ===');
-    
-    const bucketName = process.env.AWS_S3_BUCKET || 'executive-lms-backups-266735837284';
-    
-    console.log(`Verifying S3 bucket: ${bucketName}`);
-    
-    try {
-      const region = await getBucketRegion(bucketName);
-      const isCorrectRegion = region === expectedRegion;
-      
-      console.log(`Bucket: ${bucketName}`);
-      console.log(`  Region: ${region}`);
-      console.log(`  Correct Region: ${isCorrectRegion ? '✅ Yes' : '❌ No'}`);
-      
-      if (!isCorrectRegion) {
-        console.log(`  WARNING: Bucket ${bucketName} is in ${region} instead of ${expectedRegion}`);
-        console.log(`  To fix this, you need to create a new bucket in ${expectedRegion} and migrate the data`);
-      }
-    } catch (error) {
-      if (error.name === 'NoSuchBucket') {
-        console.log(`Bucket ${bucketName} does not exist`);
-      } else {
-        throw error;
-      }
-    }
-  } catch (error) {
-    console.error('Error verifying S3 buckets:', error);
-  }
-};
-
-// Function to verify EC2 instances
-const verifyEC2Instances = async () => {
-  try {
-    console.log('\n=== Verifying EC2 Instances ===');
-    
-    const command = new DescribeInstancesCommand({});
-    const response = await ec2Client.send(command);
-    
-    if (!response.Reservations || response.Reservations.length === 0) {
-      console.log('No EC2 instances found');
-      return;
-    }
-    
-    let instanceCount = 0;
-    
-    for (const reservation of response.Reservations) {
-      for (const instance of reservation.Instances) {
-        instanceCount++;
-        
-        console.log(`Instance: ${instance.InstanceId}`);
-        console.log(`  State: ${instance.State.Name}`);
-        console.log(`  Type: ${instance.InstanceType}`);
-        console.log(`  Region: ${expectedRegion}`);
-        
-        if (instance.Tags) {
-          const nameTag = instance.Tags.find(tag => tag.Key === 'Name');
-          if (nameTag) {
-            console.log(`  Name: ${nameTag.Value}`);
-          }
-        }
-      }
-    }
-    
-    console.log(`Found ${instanceCount} EC2 instances in ${expectedRegion}`);
-  } catch (error) {
-    console.error('Error verifying EC2 instances:', error);
-  }
-};
-
-// Function to verify CloudWatch metrics
-const verifyCloudWatchMetrics = async () => {
-  try {
-    console.log('\n=== Verifying CloudWatch Metrics ===');
-    
-    const command = new ListMetricsCommand({
-      Namespace: 'MaxJobOffers/S3'
-    });
-    
-    const response = await cloudWatchClient.send(command);
-    
-    if (!response.Metrics || response.Metrics.length === 0) {
-      console.log('No CloudWatch metrics found for MaxJobOffers/S3 namespace');
-      return;
-    }
-    
-    console.log(`Found ${response.Metrics.length} CloudWatch metrics in ${expectedRegion}`);
-    
-    for (const metric of response.Metrics) {
-      console.log(`Metric: ${metric.MetricName}`);
-      console.log(`  Namespace: ${metric.Namespace}`);
-      console.log(`  Region: ${expectedRegion}`);
-      
-      if (metric.Dimensions) {
-        console.log('  Dimensions:');
-        for (const dimension of metric.Dimensions) {
-          console.log(`    ${dimension.Name}: ${dimension.Value}`);
-        }
-      }
-    }
-  } catch (error) {
-    console.error('Error verifying CloudWatch metrics:', error);
-  }
-};
-
-// Function to verify RDS instances
-const verifyRDSInstances = async () => {
-  try {
-    console.log('\n=== Verifying RDS Instances ===');
-    
-    const command = new DescribeDBInstancesCommand({});
-    const response = await rdsClient.send(command);
-    
-    if (!response.DBInstances || response.DBInstances.length === 0) {
-      console.log('No RDS instances found');
-      return;
-    }
-    
-    console.log(`Found ${response.DBInstances.length} RDS instances in ${expectedRegion}`);
-    
-    for (const instance of response.DBInstances) {
-      console.log(`Instance: ${instance.DBInstanceIdentifier}`);
-      console.log(`  Engine: ${instance.Engine} ${instance.EngineVersion}`);
-      console.log(`  Status: ${instance.DBInstanceStatus}`);
-      console.log(`  Region: ${expectedRegion}`);
-      console.log(`  Endpoint: ${instance.Endpoint?.Address}`);
-    }
-  } catch (error) {
-    console.error('Error verifying RDS instances:', error);
-  }
-};
-
-// Main function
-const main = async () => {
-  console.log(`Verifying AWS resources in region: ${expectedRegion}`);
+// Check if regions are different
+if (s3Region !== rdsRegion && rdsRegion !== 'unknown') {
+  console.log('\n⚠️ Cross-Region Configuration Detected ⚠️');
+  console.log(`Your RDS database is in ${rdsRegion} while your S3 configuration is set to ${s3Region}.`);
+  console.log('This cross-region setup can cause:');
+  console.log('1. Increased latency for operations involving both services');
+  console.log('2. Higher data transfer costs between regions');
+  console.log('3. Potential consistency issues during cross-region operations');
   
-  await verifyS3Buckets();
-  await verifyEC2Instances();
-  await verifyCloudWatchMetrics();
-  await verifyRDSInstances();
+  console.log('\n=== Recommended Solutions ===');
+  console.log('Option 1: Update your .env file to use consistent regions');
+  console.log(`- If your S3 bucket is actually in ${s3Region}, but your RDS is in ${rdsRegion}:`);
+  console.log('  - Create a new S3 bucket in the same region as your RDS');
+  console.log('  - Update AWS_S3_BUCKET and AWS_REGION in .env file');
+  console.log(`- If your RDS is actually in ${rdsRegion}, but your S3 bucket is in ${s3Region}:`);
+  console.log('  - Update AWS_REGION in .env file to match your RDS region');
+  console.log('  - Implement region-specific S3 clients in your code');
   
-  console.log('\nVerification complete!');
+  console.log('\nOption 2: Implement region-specific AWS clients');
+  console.log('- Create separate AWS clients for each region');
+  console.log('- Use the appropriate client based on the service you are accessing');
+  
+  // Example implementation for multi-region AWS clients
+  console.log('\n=== Example Multi-Region Implementation ===');
+  console.log('Create a file src/utils/awsClients.js with:');
+  console.log(`
+const { S3Client } = require('@aws-sdk/client-s3');
+const { RDSClient } = require('@aws-sdk/client-rds');
+
+// AWS credentials
+const credentials = {
+  accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+  secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY
 };
 
-// Run the main function
-main().catch(error => {
-  console.error('Error:', error);
-  process.exit(1);
-});
+// Create region-specific S3 clients
+const s3Clients = {
+  'us-east-1': new S3Client({
+    region: 'us-east-1',
+    credentials
+  }),
+  'us-east-2': new S3Client({
+    region: 'us-east-2',
+    credentials
+  }),
+  'us-west-2': new S3Client({
+    region: 'us-west-2',
+    credentials
+  })
+};
+
+// Create region-specific RDS clients
+const rdsClients = {
+  'us-east-1': new RDSClient({
+    region: 'us-east-1',
+    credentials
+  }),
+  'us-east-2': new RDSClient({
+    region: 'us-east-2',
+    credentials
+  }),
+  'us-west-2': new RDSClient({
+    region: 'us-west-2',
+    credentials
+  })
+};
+
+// Get the appropriate S3 client for a region
+const getS3Client = (region = process.env.AWS_REGION) => {
+  return s3Clients[region] || s3Clients[process.env.AWS_REGION];
+};
+
+// Get the appropriate RDS client for a region
+const getRDSClient = (region = '${rdsRegion}') => {
+  return rdsClients[region] || rdsClients['${rdsRegion}'];
+};
+
+module.exports = {
+  getS3Client,
+  getRDSClient,
+  s3Clients,
+  rdsClients
+};
+`);
+} else {
+  console.log('\n✅ Your AWS services are configured to use the same region.');
+  console.log('This is the optimal configuration for performance and cost.');
+}
+
+// Verify the actual S3 bucket region
+console.log('\n=== Verifying Actual S3 Bucket Region ===');
+console.log('To verify the actual region of your S3 bucket, run:');
+console.log(`node scripts/find-bucket-region.js`);
+
+// Verify EC2 region
+console.log('\n=== Verifying EC2 Region ===');
+console.log('To verify the region of your EC2 instances, check the AWS Management Console or run:');
+console.log('aws ec2 describe-instances --query "Reservations[*].Instances[*].[InstanceId,Placement.AvailabilityZone]" --output table');
+
+console.log('\n=== Verification Complete ===');
+console.log('Make sure all your AWS services are in the same region for optimal performance and cost.');
