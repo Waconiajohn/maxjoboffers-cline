@@ -1,6 +1,0 @@
-This is a test file created at 2025-03-16T21:29:44.944Z
-
-It is used to test S3 file uploads for the MaxJobOffers application.
-
-AWS Region: us-west-2
-S3 Bucket: executive-lms-backups-266735837284

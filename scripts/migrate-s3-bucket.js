@@ -23,8 +23,8 @@ const {
 require('dotenv').config();
 
 // Source bucket configuration
-const SOURCE_REGION = process.env.AWS_REGION || 'us-west-2';
-const SOURCE_BUCKET = process.env.AWS_S3_BUCKET || 'executive-lms-backups-266735837284';
+const SOURCE_REGION = 'us-west-2';
+const SOURCE_BUCKET = 'executive-lms-backups-266735837284';
 
 // Target bucket configuration
 const TARGET_REGION = 'us-east-1'; // N. Virginia region
@@ -52,13 +52,20 @@ async function createTargetBucket() {
   try {
     console.log(`Creating new bucket '${TARGET_BUCKET}' in region '${TARGET_REGION}'...`);
     
-    const command = new CreateBucketCommand({
-      Bucket: TARGET_BUCKET,
-      CreateBucketConfiguration: {
-        LocationConstraint: TARGET_REGION
-      }
-    });
+    // For us-east-1 (N. Virginia), do not specify LocationConstraint
+    // as it's the default region in AWS S3
+    const params = {
+      Bucket: TARGET_BUCKET
+    };
     
+    // Only add LocationConstraint for non-us-east-1 regions
+    if (TARGET_REGION !== 'us-east-1') {
+      params.CreateBucketConfiguration = {
+        LocationConstraint: TARGET_REGION
+      };
+    }
+    
+    const command = new CreateBucketCommand(params);
     await targetClient.send(command);
     console.log(`✅ Bucket '${TARGET_BUCKET}' created successfully!`);
     return true;

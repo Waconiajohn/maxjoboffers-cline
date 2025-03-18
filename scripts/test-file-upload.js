@@ -10,6 +10,7 @@ const fs = require('fs');
 const path = require('path');
 const { Upload } = require('@aws-sdk/lib-storage');
 const { S3Client } = require('@aws-sdk/client-s3');
+require('dotenv').config();
 
 // Define the AWS region and bucket name from environment variables
 const REGION = process.env.AWS_REGION || 'us-west-2';
