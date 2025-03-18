@@ -46,6 +46,24 @@ Installs the required dependencies on the EC2 instance.
 node scripts/install-ec2-dependencies.js
 ```
 
+### update-ec2-with-new-s3-config.js
+
+Updates the EC2 instance with the new S3 bucket configuration, installs required dependencies, and restarts the application.
+
+```bash
+# Set the EC2 host and key path environment variables
+export EC2_HOST=ec2-user@ec2-12-345-67-890.compute-1.amazonaws.com
+export EC2_KEY_PATH=~/.ssh/your-key.pem
+
+# Run the script
+node scripts/update-ec2-with-new-s3-config.js
+```
+
+This script:
+- Updates the .env file on the EC2 instance with the new AWS_REGION and AWS_S3_BUCKET values
+- Installs the @aws-sdk/lib-storage package for handling file uploads
+- Restarts the application using PM2 (if available) or npm scripts
+
 ## Monitoring and Backup Scripts
 
 ### setup-cloudwatch-monitoring.js
