@@ -7,5 +7,10 @@
 			"path": "../exec-lms"
 		}
 	],
-	"settings": {}
+	"settings": {},
+	"extensions": {
+		"recommendations": [
+			"saoudrizwan.claude-dev"
+		]
+	}
 }

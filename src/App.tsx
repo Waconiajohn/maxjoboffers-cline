@@ -5,22 +5,26 @@ import { useAuth } from 'wasp/auth';
 // Layout
 import MainLayout from './components/MainLayout';
 
-// Pages
-import DashboardPage from './pages/DashboardPage';
+// Feature Pages
+import { DashboardPage, ResourcesPage } from './features/dashboard';
+import { JobSearchPage } from './features/job';
+import { ResumeUploadPage } from './features/resume';
+import { InterviewPrepPage } from './features/interview';
+import { LinkedInContentPage } from './features/linkedin';
+import { FinancialPlanPage, RetirementCalculatorPage } from './features/financial';
+import { SubscriptionPlansPage, BillingHistoryPage } from './features/payment';
+
+// Regular Pages
 import LoginPage from './pages/LoginPage';
 import SignupPage from './pages/SignupPage';
 import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
 import EmailVerificationPage from './pages/EmailVerificationPage';
-import JobSearchPage from './pages/JobSearchPage';
 import JobDetailPage from './pages/JobDetailPage';
-import ResumeUploadPage from './pages/ResumeUploadPage';
 import ResumeListPage from './pages/ResumeListPage';
 import ResumeDetailPage from './pages/ResumeDetailPage';
 import CoverLetterListPage from './pages/CoverLetterListPage';
-import InterviewPrepPage from './pages/InterviewPrepPage';
 import InterviewSessionPage from './pages/InterviewSessionPage';
-import LinkedInContentPage from './pages/LinkedInContentPage';
 import LinkedInPostPage from './pages/LinkedInPostPage';
 import NetworkingStrategyPage from './pages/NetworkingStrategyPage';
 import UserProfilePage from './pages/UserProfilePage';
@@ -61,17 +65,29 @@ const App: React.FC = () => {
           
           {/* Protected Routes - These are also protected by Wasp's authRequired in main.wasp */}
           <Route exact path="/dashboard" component={DashboardPage} />
+          <Route exact path="/resources" component={ResourcesPage} />
+          
           <Route exact path="/jobs/search" component={JobSearchPage} />
           <Route exact path="/jobs/:id" component={JobDetailPage} />
+          
           <Route exact path="/resumes/new" component={ResumeUploadPage} />
           <Route exact path="/resumes" component={ResumeListPage} />
           <Route exact path="/resumes/:id" component={ResumeDetailPage} />
           <Route exact path="/cover-letters" component={CoverLetterListPage} />
+          
           <Route exact path="/interviews" component={InterviewPrepPage} />
           <Route exact path="/interviews/:id" component={InterviewSessionPage} />
+          
           <Route exact path="/linkedin-content" component={LinkedInContentPage} />
           <Route exact path="/linkedin-content/:id" component={LinkedInPostPage} />
           <Route exact path="/networking-strategy/:id" component={NetworkingStrategyPage} />
+          
+          <Route exact path="/financial/plan" component={FinancialPlanPage} />
+          <Route exact path="/financial/retirement" component={RetirementCalculatorPage} />
+          
+          <Route exact path="/payment/plans" component={SubscriptionPlansPage} />
+          <Route exact path="/payment/billing" component={BillingHistoryPage} />
+          
           <Route exact path="/profile" component={UserProfilePage} />
           
           {/* 404 Page */}

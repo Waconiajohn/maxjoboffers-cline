@@ -7,8 +7,8 @@ import {
 } from '@aws-sdk/client-s3';
 
 // Define the AWS region and bucket name from environment variables
-const REGION = process.env.AWS_REGION || 'us-west-2';
-const BUCKET_NAME = process.env.AWS_S3_BUCKET || 'executive-lms-backups-266735837284';
+const REGION = process.env.AWS_REGION || 'us-east-1';
+const BUCKET_NAME = process.env.AWS_S3_BUCKET || 'executive-lms-backups-266735837284-us-east-1';
 
 // Maximum file size in bytes (10MB)
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
