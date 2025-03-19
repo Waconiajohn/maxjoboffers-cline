@@ -3,32 +3,18 @@ import { Router, Route, Switch, Link } from 'wasp/client/router';
 import { useAuth } from 'wasp/auth';
 
 // Layout
-import MainLayout from './components/MainLayout';
+import { MainLayout } from './features/common';
 
 // Feature Pages
 import { DashboardPage, ResourcesPage } from './features/dashboard';
-import { JobSearchPage } from './features/job';
-import { ResumeUploadPage } from './features/resume';
-import { InterviewPrepPage } from './features/interview';
-import { LinkedInContentPage } from './features/linkedin';
+import { JobSearchPage, JobDetailPage, CoverLetterListPage } from './features/job';
+import { ResumeUploadPage, ResumeListPage, ResumeDetailPage } from './features/resume';
+import { InterviewPrepPage, InterviewSessionPage } from './features/interview';
+import { LinkedInContentPage, LinkedInPostPage, NetworkingStrategyPage } from './features/linkedin';
 import { FinancialPlanPage, RetirementCalculatorPage } from './features/financial';
 import { SubscriptionPlansPage, BillingHistoryPage } from './features/payment';
-
-// Regular Pages
-import LoginPage from './pages/LoginPage';
-import SignupPage from './pages/SignupPage';
-import ForgotPasswordPage from './pages/ForgotPasswordPage';
-import ResetPasswordPage from './pages/ResetPasswordPage';
-import EmailVerificationPage from './pages/EmailVerificationPage';
-import JobDetailPage from './pages/JobDetailPage';
-import ResumeListPage from './pages/ResumeListPage';
-import ResumeDetailPage from './pages/ResumeDetailPage';
-import CoverLetterListPage from './pages/CoverLetterListPage';
-import InterviewSessionPage from './pages/InterviewSessionPage';
-import LinkedInPostPage from './pages/LinkedInPostPage';
-import NetworkingStrategyPage from './pages/NetworkingStrategyPage';
-import UserProfilePage from './pages/UserProfilePage';
-import LandingPage from './pages/LandingPage';
+import { LoginPage, SignupPage, ForgotPasswordPage, ResetPasswordPage, EmailVerificationPage, UserProfilePage } from './features/auth';
+import { LandingPage } from './features/common';
 
 // Error pages
 const NotFoundPage = () => (
